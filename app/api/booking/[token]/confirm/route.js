@@ -213,10 +213,16 @@ export async function POST(
      * 6. Verify the slot still belongs
      * to the approved category.
      */
-    if (
-      slot.category !==
-      application.category
-    ) {
+    console.log("Slot category:", slot.category);
+    console.log(
+      "Application category:",
+      application.categoryId
+    );
+    // if (
+    //   slot.category !==
+    //   application.categoryId
+    // ) 
+    if (slot.category.equals(application.category)) {
       return Response.json(
         {
           success: false,

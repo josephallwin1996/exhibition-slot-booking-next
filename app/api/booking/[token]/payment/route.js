@@ -46,14 +46,16 @@ export async function GET(
     await Booking.findOne({
         applicationId:
         application._id,
-
-        status: {
+        paymentStatus: {
         $in: [
             "pending_payment",
             "paid",
+            "pending"
         ],
         },
-    }).lean();
+    }).
+    populate("category", "name")
+    .lean();
 
     if (!booking) {
       return Response.json(

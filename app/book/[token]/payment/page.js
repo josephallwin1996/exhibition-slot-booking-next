@@ -332,7 +332,7 @@ export default function PaymentPage() {
               <DetailRow
                 label="Category"
                 value={
-                  booking.category
+                  booking.category.name
                 }
               />
 

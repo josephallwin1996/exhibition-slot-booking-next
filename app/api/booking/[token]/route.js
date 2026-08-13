@@ -45,7 +45,8 @@ export async function GET(request, { params }) {
         contactPerson: application.contactPerson,
         email: application.email,
         mobile: application.mobile,
-        category: application.category,
+        category: application.categoryName,
+        categoryId: application.categoryId,
         status: application.status,
       },
     });

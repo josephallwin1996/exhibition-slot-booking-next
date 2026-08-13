@@ -6,7 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "migrate:categories": "node --env-file=.env.local scripts/migrateCategories.js",
+    "migrate:slot-categories": "node --env-file=.env.local scripts/migrateSlotCategories.js",
+    "seed:slots": "node --env-file=.env.local scripts/seedSlots.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

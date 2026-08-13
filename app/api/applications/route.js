@@ -1,5 +1,7 @@
 import connectDB from "@/lib/mongodb";
 import Application from "@/models/Application";
+import Category from "@/models/Category";
+
 import {
   sendApplicationSubmittedEmail,
   sendNewApplicationAdminEmail,
@@ -14,45 +16,29 @@ export async function POST(request) {
       contactPerson,
       mobile,
       email,
-      category,
+      categoryId,
       description,
       instagram,
       socialMedia,
     } = body;
 
+    // --------------------------------------------------
     // Basic validation
+    // --------------------------------------------------
+
     if (
       !businessName ||
       !contactPerson ||
       !mobile ||
       !email ||
-      !category ||
+      !categoryId ||
       !description
     ) {
       return Response.json(
         {
           success: false,
-          message: "Please fill in all required fields.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    // Validate category
-    const allowedCategories = [
-      "Jewellery",
-      "Clothing",
-      "Food",
-      "Decor",
-    ];
-
-    if (!allowedCategories.includes(category)) {
-      return Response.json(
-        {
-          success: false,
-          message: "Invalid category selected.",
+          message:
+            "Please fill in all required fields.",
         },
         {
           status: 400,
@@ -62,13 +48,42 @@ export async function POST(request) {
 
     await connectDB();
 
-    // Check whether this email already has an active application
-    const existingApplication = await Application.findOne({
-      email: email.toLowerCase().trim(),
-      status: {
-        $in: ["pending", "approved"],
-      },
-    });
+    // --------------------------------------------------
+    // Validate category
+    // --------------------------------------------------
+
+    const category = await Category.findOne({
+      _id: categoryId,
+    }).lean();
+
+    if (!category) {
+      return Response.json(
+        {
+          success: false,
+          message:
+            "Invalid category selected.",
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    // --------------------------------------------------
+    // Check whether this email already has
+    // an active application
+    // --------------------------------------------------
+
+    const normalizedEmail =
+      email.toLowerCase().trim();
+
+    const existingApplication =
+      await Application.findOne({
+        email: normalizedEmail,
+        status: {
+          $in: ["pending", "approved"],
+        },
+      });
 
     if (existingApplication) {
       return Response.json(
@@ -83,55 +98,105 @@ export async function POST(request) {
       );
     }
 
+    // --------------------------------------------------
     // Create application
-    const application = await Application.create({
-      businessName: businessName.trim(),
-      contactPerson: contactPerson.trim(),
-      mobile: mobile.trim(),
-      email: email.toLowerCase().trim(),
-      category,
-      description: description.trim(),
-      instagram: instagram?.trim() || "",
-      socialMedia: socialMedia?.trim() || "",
-      status: "pending",
-    });
+    // --------------------------------------------------
+
+    const application =
+      await Application.create({
+        businessName:
+          businessName.trim(),
+
+        contactPerson:
+          contactPerson.trim(),
+
+        mobile:
+          mobile.trim(),
+
+        email:
+          normalizedEmail,
+
+        categoryId:
+          category._id,
+
+        description:
+          description.trim(),
+
+        instagram:
+          instagram?.trim() || "",
+
+        socialMedia:
+          socialMedia?.trim() || "",
+
+        status: "pending",
+      });
+
+    // --------------------------------------------------
+    // Emails
+    // --------------------------------------------------
 
     try {
-        await sendApplicationSubmittedEmail({
-            name: application.contactPerson,
-            email: application.email,
-            businessName: application.businessName,
-            category: application.category,
-        });
+      await sendApplicationSubmittedEmail({
+        name:
+          application.contactPerson,
 
-        await sendNewApplicationAdminEmail({
-            businessName: application.businessName,
-            contactPerson: application.contactPerson,
-            email: application.email,
-            category: application.category,
-        });
-    } 
-    catch (emailError) {
-     console.error("Application email error:", emailError);
+        email:
+          application.email,
+
+        businessName:
+          application.businessName,
+
+        category:
+          category.name,
+      });
+
+      await sendNewApplicationAdminEmail({
+        businessName:
+          application.businessName,
+
+        contactPerson:
+          application.contactPerson,
+
+        email:
+          application.email,
+
+        category:
+          category.name,
+      });
+    } catch (emailError) {
+      console.error(
+        "Application email error:",
+        emailError
+      );
     }
+
+    // --------------------------------------------------
+    // Response
+    // --------------------------------------------------
 
     return Response.json(
       {
         success: true,
-        message: "Application submitted successfully.",
-        applicationId: application._id,
+        message:
+          "Application submitted successfully.",
+        applicationId:
+          application._id,
       },
       {
         status: 201,
       }
     );
   } catch (error) {
-    console.error("Application submission error:", error);
+    console.error(
+      "Application submission error:",
+      error
+    );
 
     return Response.json(
       {
         success: false,
-        message: "Something went wrong. Please try again.",
+        message:
+          "Something went wrong. Please try again.",
       },
       {
         status: 500,

@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 
 import connectDB from "@/lib/mongodb";
 import Slot from "@/models/Slot";
+import Category from "@/models/Category";
 import { verifyAdminToken } from "@/lib/auth";
 
 async function authenticateAdmin() {
@@ -37,20 +38,34 @@ export async function GET(request) {
       );
     }
 
-    const { searchParams } = new URL(request.url);
+    const { searchParams } =
+      new URL(request.url);
 
-    const search = searchParams.get("search") || "";
-    const category = searchParams.get("category") || "all";
-    const status = searchParams.get("status") || "all";
+    const search =
+      searchParams.get("search") || "";
+
+    const category =
+      searchParams.get("category") || "all";
+
+    const status =
+      searchParams.get("status") || "all";
 
     await connectDB();
 
     const query = {};
 
     if (search.trim()) {
-      query.slotNumber = new RegExp(search.trim(), "i");
+      query.slotNumber = new RegExp(
+        search.trim(),
+        "i"
+      );
     }
 
+    /*
+     * Dynamic category filtering.
+     *
+     * category contains a Category ObjectId.
+     */
     if (category !== "all") {
       query.category = category;
     }
@@ -60,34 +75,69 @@ export async function GET(request) {
     }
 
     const slots = await Slot.find(query)
-      .sort({ position: 1, slotNumber: 1 })
+      .populate(
+        "category",
+        "name slug"
+      )
+      .sort({
+        position: 1,
+        slotNumber: 1,
+      })
       .lean();
 
+    /*
+     * Load active categories dynamically.
+     */
+    const categories =
+      await Category.find({
+        active: true,
+      })
+        .select(
+          "_id name slug position active"
+        )
+        .sort({
+          position: 1,
+          name: 1,
+        })
+        .lean();
+
     const stats = {
-      total: await Slot.countDocuments(),
-      available: await Slot.countDocuments({
-        status: "available",
-      }),
-      booked: await Slot.countDocuments({
-        status: "booked",
-      }),
-      unavailable: await Slot.countDocuments({
-        status: "unavailable",
-      }),
+      total:
+        await Slot.countDocuments(),
+
+      available:
+        await Slot.countDocuments({
+          status: "available",
+        }),
+
+      booked:
+        await Slot.countDocuments({
+          status: "booked",
+        }),
+
+      unavailable:
+        await Slot.countDocuments({
+          status: "unavailable",
+        }),
     };
 
     return Response.json({
       success: true,
       slots,
+      categories,
       stats,
     });
   } catch (error) {
-    console.error("Get slots error:", error);
+    console.error(
+      "Get slots error:",
+      error
+    );
 
     return Response.json(
       {
         success: false,
-        message: "Unable to load slots.",
+        message:
+          "Unable to load slots.",
       },
       {
         status: 500,
@@ -98,7 +148,8 @@ export async function GET(request) {
 
 export async function PATCH(request) {
   try {
-    const admin = await authenticateAdmin();
+    const admin =
+      await authenticateAdmin();
 
     if (!admin) {
       return Response.json(
@@ -112,7 +163,8 @@ export async function PATCH(request) {
       );
     }
 
-    const body = await request.json();
+    const body =
+      await request.json();
 
     const {
       id,
@@ -126,20 +178,14 @@ export async function PATCH(request) {
       return Response.json(
         {
           success: false,
-          message: "Slot ID is required.",
+          message:
+            "Slot ID is required.",
         },
         {
           status: 400,
         }
       );
     }
-
-    const allowedCategories = [
-      "Jewellery",
-      "Clothing",
-      "Food",
-      "Decor",
-    ];
 
     const allowedStatuses = [
       "available",
@@ -148,28 +194,14 @@ export async function PATCH(request) {
     ];
 
     if (
-      category &&
-      !allowedCategories.includes(category)
-    ) {
-      return Response.json(
-        {
-          success: false,
-          message: "Invalid category.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    if (
       status &&
       !allowedStatuses.includes(status)
     ) {
       return Response.json(
         {
           success: false,
-          message: "Invalid slot status.",
+          message:
+            "Invalid slot status.",
         },
         {
           status: 400,
@@ -179,7 +211,36 @@ export async function PATCH(request) {
 
     await connectDB();
 
-    const slot = await Slot.findById(id);
+    /*
+     * Validate the category dynamically.
+     *
+     * null means "unassigned".
+     */
+    let categoryDocument = null;
+
+    if (category) {
+      categoryDocument =
+        await Category.findOne({
+          _id: category,
+          active: true,
+        });
+
+      if (!categoryDocument) {
+        return Response.json(
+          {
+            success: false,
+            message:
+              "Invalid or inactive category.",
+          },
+          {
+            status: 400,
+          }
+        );
+      }
+    }
+
+    const slot =
+      await Slot.findById(id);
 
     if (!slot) {
       return Response.json(
@@ -193,7 +254,10 @@ export async function PATCH(request) {
       );
     }
 
-    // A booked slot cannot be manually changed.
+    /*
+     * Booked slots cannot be manually changed
+     * to another status.
+     */
     if (
       slot.status === "booked" &&
       status &&
@@ -211,8 +275,20 @@ export async function PATCH(request) {
       );
     }
 
-    if (category) {
-      slot.category = category;
+    /*
+     * Category can be assigned or cleared.
+     *
+     * We intentionally allow clearing the category
+     * so an admin can temporarily unassign a stall.
+     */
+    if (
+      category === null ||
+      category === ""
+    ) {
+      slot.category = null;
+    } else if (category) {
+      slot.category =
+        categoryDocument._id;
     }
 
     if (typeof price === "number") {
@@ -220,7 +296,8 @@ export async function PATCH(request) {
         return Response.json(
           {
             success: false,
-            message: "Price cannot be negative.",
+            message:
+              "Price cannot be negative.",
           },
           {
             status: 400,
@@ -236,23 +313,34 @@ export async function PATCH(request) {
     }
 
     if (typeof notes === "string") {
-      slot.notes = notes.trim();
+      slot.notes =
+        notes.trim();
     }
 
     await slot.save();
 
+    await slot.populate(
+      "category",
+      "name slug"
+    );
+
     return Response.json({
       success: true,
-      message: "Slot updated successfully.",
+      message:
+        "Slot updated successfully.",
       slot,
     });
   } catch (error) {
-    console.error("Update slot error:", error);
+    console.error(
+      "Update slot error:",
+      error
+    );
 
     return Response.json(
       {
         success: false,
-        message: "Unable to update slot.",
+        message:
+          "Unable to update slot.",
       },
       {
         status: 500,

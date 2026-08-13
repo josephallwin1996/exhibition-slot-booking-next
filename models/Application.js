@@ -27,10 +27,19 @@ const applicationSchema = new mongoose.Schema(
       trim: true,
     },
 
-    category: {
+    // Legacy category field.
+    // Keep this temporarily so existing
+    // applications and booking logic continue working.
+    categoryName: {
       type: String,
-      enum: ["Jewellery", "Clothing", "Food", "Decor"],
-      required: true,
+      default: null,
+    },
+
+    // New dynamic category reference.
+    categoryId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      default: null,
     },
 
     description: {
@@ -58,7 +67,11 @@ const applicationSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected"],
+      enum: [
+        "pending",
+        "approved",
+        "rejected",
+      ],
       default: "pending",
     },
 
@@ -87,8 +100,16 @@ const applicationSchema = new mongoose.Schema(
   }
 );
 
+applicationSchema.index({
+  categoryId: 1,
+  status: 1,
+});
+
 const Application =
   mongoose.models.Application ||
-  mongoose.model("Application", applicationSchema);
+  mongoose.model(
+    "Application",
+    applicationSchema
+  );
 
 export default Application;

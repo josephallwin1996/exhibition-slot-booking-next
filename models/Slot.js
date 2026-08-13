@@ -10,14 +10,9 @@ const slotSchema = new mongoose.Schema(
     },
 
     category: {
-      type: String,
-      enum: [
-        "Jewellery",
-        "Clothing",
-        "Food",
-        "Decor",
-      ],
-      required: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+      default: null,
     },
 
     price: {

@@ -115,7 +115,7 @@ export async function POST(
   await Slot.findOneAndUpdate(
     {
       _id: slotId,
-      category: application.category,
+      category: application.categoryId,
       status: "available",
 
       $or: [

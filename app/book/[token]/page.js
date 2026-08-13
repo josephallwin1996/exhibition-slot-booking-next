@@ -276,6 +276,7 @@ export default function BookingPage() {
     setConfirmedBooking(
       data.booking
     );
+    
   } catch (error) {
     console.error(error);
 
@@ -326,7 +327,7 @@ export default function BookingPage() {
 
   const grandTotal =
     slotPrice + addOnTotal;
-  
+  console.log("Rendering ExhibitionLayout with slots:", application)
   return (
     <main className="min-h-screen bg-slate-100">
       <header className="bg-slate-950 px-6 py-12 text-center text-white">
@@ -345,7 +346,7 @@ export default function BookingPage() {
       </header>
 
       <section className="px-4 py-10 sm:px-6 lg:py-16">
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto max-w-7xl">
           {/* Approved */}
           <div className="mb-6 rounded-2xl border border-green-200 bg-green-50 p-5">
             <div className="flex items-start gap-4">
@@ -430,6 +431,14 @@ export default function BookingPage() {
     <ExhibitionLayout
       slots={slots}
       selectedSlot={selectedSlot}
+      categoryId={
+        application?.categoryId
+      }
+      categoryName={
+        application?.category?.name ||
+        application?.categoryName ||
+        application?.category
+      }
       onSelect={(slot) => {
         setSelectedSlot(slot);
       }}
@@ -449,7 +458,7 @@ export default function BookingPage() {
           </h4>
 
           <p className="mt-1 text-sm text-slate-600">
-            {selectedSlot.category}
+            {selectedSlot.category.name}
           </p>
         </div>
 
@@ -623,7 +632,7 @@ export default function BookingPage() {
               </div>
             </div>
 
-            {/* <button
+            <button
               type="button"
               onClick={confirmBooking}
               disabled={confirmingBooking}
@@ -632,18 +641,8 @@ export default function BookingPage() {
               {confirmingBooking
                 ? "Creating Booking..."
                 : "Confirm Booking"}
-          </button> */}
-          <button
-            type="button"
-            onClick={() =>
-              router.push(
-                `/book/${params.token}/payment`
-              )
-            }
-            className="mt-6 w-full rounded-xl bg-slate-950 px-6 py-4 text-sm font-bold text-white hover:bg-slate-800"
-          >
-            Proceed to Payment
           </button>
+          
           {bookingError && (
             <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {bookingError}
@@ -697,7 +696,19 @@ export default function BookingPage() {
                   </span>
                 </div>
               </div>
+              <button
+            type="button"
+            onClick={() =>
+              router.push(
+                `/book/${params.token}/payment`
+              )
+            }
+            className="mt-6 w-full rounded-xl bg-slate-950 px-6 py-4 text-sm font-bold text-white hover:bg-slate-800"
+          >
+            Proceed to Payment
+          </button>
             </div>
+            
           )}
           </div>
         )}
@@ -707,8 +718,8 @@ export default function BookingPage() {
           {reservationError}
         </div>
       )}
-
-      <button
+      {!reservation && (
+        <button
         type="button"
         onClick={reserveSelectedSlot}
         disabled={reserving}
@@ -718,6 +729,8 @@ export default function BookingPage() {
           ? "Reserving Stall..."
           : `Continue with Stall ${selectedSlot.slotNumber}`}
       </button>
+      )}
+      
     </div>
   )}
 </div>
