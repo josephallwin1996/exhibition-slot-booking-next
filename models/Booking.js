@@ -42,7 +42,7 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       unique: true,
       sparse: true,
-      default: null,
+      // default: null,
       index: true,
     },
 

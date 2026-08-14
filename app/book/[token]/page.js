@@ -349,7 +349,7 @@ export default function BookingPage() {
         <div className="mx-auto max-w-7xl">
           {/* Approved */}
           <div className="mb-6 rounded-2xl border border-green-200 bg-green-50 p-5">
-            <div className="flex items-start gap-4">
+            <div className="flex items-start justify-center gap-4">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-600 text-white">
                 ✓
               </div>
@@ -478,7 +478,7 @@ export default function BookingPage() {
 
       {reservation && (
         <div className="mt-6 rounded-2xl border border-green-200 bg-green-50 p-6">
-          <div className="flex items-start gap-4">
+          <div className="flex items-start justify-center gap-4">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-green-600 font-bold text-white">
               ✓
             </div>
@@ -631,17 +631,19 @@ export default function BookingPage() {
                 </div>
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={confirmBooking}
-              disabled={confirmingBooking}
-              className="mt-7 w-full rounded-xl bg-white px-6 py-4 text-sm font-bold text-slate-950 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {confirmingBooking
-                ? "Creating Booking..."
-                : "Confirm Booking"}
-          </button>
+            {!confirmedBooking && (
+                <button
+                    type="button"
+                    onClick={confirmBooking}
+                    disabled={confirmingBooking}
+                    className="mt-7 w-full rounded-xl bg-white px-6 py-4 text-sm font-bold text-slate-950 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {confirmingBooking
+                      ? "Creating Booking..."
+                      : "Confirm Booking"}
+                </button>
+            )}
+            
           
           {bookingError && (
             <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -651,7 +653,7 @@ export default function BookingPage() {
 
           {confirmedBooking && (
             <div className="mt-8 rounded-2xl border border-green-200 bg-green-50 p-6">
-              <div className="flex items-start gap-4">
+              <div className="flex items-start justify-center gap-4">
                 <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-600 text-xl font-bold text-white">
                   ✓
                 </div>

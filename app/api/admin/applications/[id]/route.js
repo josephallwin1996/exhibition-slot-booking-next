@@ -46,7 +46,7 @@ export async function GET(request, { params }) {
 
     await connectDB();
 
-    const application = await Application.findById(id).lean();
+    const application = await Application.findById(id).populate("categoryId", "name").lean();
 
     if (!application) {
       return Response.json(

@@ -282,7 +282,7 @@ export default function ApplicationDetailsPage() {
 
             <InfoItem
               label="Category"
-              value={application.category}
+              value={application.categoryId.name}
             />
 
             <InfoItem

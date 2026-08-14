@@ -632,7 +632,7 @@ export default function ApplyPage() {
                 LOGO
             ================================================== */}
 
-            <div className="border-b border-slate-200 p-6 sm:p-8">
+            {/* <div className="border-b border-slate-200 p-6 sm:p-8">
 
               <div className="mb-7">
 
@@ -685,7 +685,7 @@ export default function ApplyPage() {
                 )}
 
               </label>
-            </div>
+            </div> */}
 
             {/* =================================================
                 MESSAGES
