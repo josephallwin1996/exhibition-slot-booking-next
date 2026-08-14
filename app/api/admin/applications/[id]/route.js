@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 
 import connectDB from "@/lib/mongodb";
 import Application from "@/models/Application";
+import Category from "@/models/Category";
 import { verifyAdminToken } from "@/lib/auth";
 import {
   sendApplicationApprovedEmail,
