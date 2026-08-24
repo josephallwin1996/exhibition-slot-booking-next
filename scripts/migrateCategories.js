@@ -26,6 +26,11 @@ const categories = [
     slug: "decor",
     position: 4,
   },
+  {
+    name: "Shared Stall",
+    slug: "shared",
+    position: 5,
+  },
 ];
 
 async function migrate() {

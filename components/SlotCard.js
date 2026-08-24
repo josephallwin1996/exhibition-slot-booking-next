@@ -100,11 +100,17 @@ export default function SlotCard({
 
       {/* Price */}
 
-      <span className="mt-1 text-[8px] opacity-60 sm:text-[9px]">
+      {/* <span className="mt-1 text-[8px] opacity-60 sm:text-[9px]">
         ₹
         {Number(
           slot.price || 0
         ).toLocaleString("en-IN")}
+      </span> */}
+
+      {/* Size */}
+
+      <span className="mt-1 text-[8px] opacity-60 sm:text-[9px]">
+        SIZE : 6 X 6 ft
       </span>
 
       {/* Status */}

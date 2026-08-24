@@ -1,6 +1,7 @@
 import connectDB from "@/lib/mongodb";
 import Booking from "@/models/Booking";
 import Application from "@/models/Application";
+import Category from "@/models/Category";
 
 export async function GET(request) {
   try {
@@ -102,7 +103,9 @@ export async function GET(request) {
         _id: {
           $in: applicationIds,
         },
-      }).lean();
+      })
+      .populate("categoryId", "name")
+      .lean();
 
     const applicationMap =
       new Map(
@@ -113,7 +116,7 @@ export async function GET(request) {
           ]
         )
       );
-
+    
     const result =
       bookings.map((booking) => {
         const application =
@@ -143,7 +146,7 @@ export async function GET(request) {
             "—",
 
           category:
-            application?.category ||
+            application?.categoryId.name ||
             booking.category,
         };
       });

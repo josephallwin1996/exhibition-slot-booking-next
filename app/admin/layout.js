@@ -20,6 +20,11 @@ const navigation = [
     icon: SlotsIcon,
   },
   {
+    label: "Categories",
+    href: "/admin/categories",
+    icon: CategoriesIcon,
+  },
+  {
     label: "Add-ons",
     href: "/admin/addons",
     icon: AddonsIcon,
@@ -456,6 +461,53 @@ function CloseIcon() {
     >
       <path d="M6 6l12 12" />
       <path d="M18 6 6 18" />
+    </svg>
+  );
+}
+
+function CategoriesIcon() {
+  return (
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <rect
+        x="3"
+        y="3"
+        width="7"
+        height="7"
+        rx="1"
+      />
+
+      <rect
+        x="14"
+        y="3"
+        width="7"
+        height="7"
+        rx="1"
+      />
+
+      <rect
+        x="3"
+        y="14"
+        width="7"
+        height="7"
+        rx="1"
+      />
+
+      <rect
+        x="14"
+        y="14"
+        width="7"
+        height="7"
+        rx="1"
+      />
     </svg>
   );
 }

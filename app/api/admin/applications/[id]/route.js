@@ -10,6 +10,10 @@ import {
   sendApplicationRejectedEmail,
 } from "@/lib/email";
 
+import {
+  sendApplicationApprovedWhatsApp,
+} from "@/lib/whatsappNotifications";
+
 async function authenticateAdmin() {
   const cookieStore = await cookies();
   const token = cookieStore.get("admin_token")?.value;
@@ -151,28 +155,57 @@ export async function PATCH(request, { params }) {
       application.rejectionReason = "";
 
       await application.save();
-      
+
+      const appUrl =
+        process.env.NEXT_PUBLIC_APP_URL;
+
+      const bookingLink =
+        `${appUrl}/booking/${bookingToken}`;
+
+      /*
+      * Email notification
+      */
       try {
         await sendApplicationApprovedEmail({
-            name: application.contactPerson,
-            email: application.email,
-            businessName: application.businessName,
-            bookingToken: application.bookingToken,
+          name: application.contactPerson,
+          email: application.email,
+          businessName: application.businessName,
+          bookingToken: application.bookingToken,
         });
-        } catch (emailError) {
+      } catch (emailError) {
         console.error(
-            "Approval email error:",
-            emailError
+          "Approval email error:",
+          emailError
         );
-     }
+      }
+
+      /*
+      * WhatsApp notification
+      */
+      try {
+        await sendApplicationApprovedWhatsApp({
+          name: application.contactPerson,
+          businessName: application.businessName,
+          category: application.category,
+          mobile: application.mobile,
+          bookingLink,
+        });
+      } catch (whatsappError) {
+        console.error(
+          "Approval WhatsApp error:",
+          whatsappError
+        );
+      }
 
       return Response.json({
         success: true,
-        message: "Application approved successfully.",
+        message:
+          "Application approved successfully.",
         application: {
           _id: application._id,
           status: application.status,
-          bookingToken: application.bookingToken,
+          bookingToken:
+            application.bookingToken,
         },
       });
     }

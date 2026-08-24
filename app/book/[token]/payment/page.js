@@ -33,7 +33,7 @@ export default function PaymentPage() {
           cache: "no-store",
         }
       );
-
+      console.log(response, "jkdsj")
       const data = await response.json();
 
       if (!response.ok) {

@@ -1,5 +1,7 @@
 import connectDB from "@/lib/mongodb";
 import Application from "@/models/Application";
+import Booking from "@/models/Booking";
+import Category from "@/models/Category";
 
 export async function GET(request, { params }) {
   try {
@@ -22,7 +24,15 @@ export async function GET(request, { params }) {
     const application = await Application.findOne({
       bookingToken: token,
       status: "approved",
-    }).lean();
+    })
+    .populate("categoryId", "name")
+    .lean();
+
+    const booking = await Booking.findOne({
+      applicationId: application._id
+    }).lean()
+
+  
 
     if (!application) {
       return Response.json(
@@ -49,6 +59,8 @@ export async function GET(request, { params }) {
         categoryId: application.categoryId,
         status: application.status,
       },
+      bookingstatus : booking?.status || "pending",
+      booking: booking || {}
     });
   } catch (error) {
     console.error("Booking validation error:", error);

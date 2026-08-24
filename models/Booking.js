@@ -167,6 +167,17 @@ const bookingSchema = new mongoose.Schema(
       default: null,
     },
 
+    termsAccepted: {
+      type: Boolean,
+      required: true,
+      default: false,
+    },
+
+    termsAcceptedAt: {
+      type: Date,
+      default: null,
+    },
+
   },
   {
     timestamps: true,

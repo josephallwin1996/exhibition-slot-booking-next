@@ -28,11 +28,9 @@ export async function POST(request) {
 
     if (
       !businessName ||
-      !contactPerson ||
       !mobile ||
       !email ||
-      !categoryId ||
-      !description
+      !categoryId
     ) {
       return Response.json(
         {

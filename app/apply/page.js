@@ -35,12 +35,9 @@ export default function ApplyPage() {
       try {
         setCategoriesLoading(true);
 
-        const response = await fetch(
-          "/api/categories",
-          {
-            cache: "no-store",
-          }
-        );
+        const response = await fetch("/api/categories", {
+          cache: "no-store",
+        });
 
         const data = await response.json();
 
@@ -51,9 +48,7 @@ export default function ApplyPage() {
           );
         }
 
-        setCategories(
-          data.categories || []
-        );
+        setCategories(data.categories || []);
       } catch (error) {
         console.error(
           "Category loading error:",
@@ -80,9 +75,7 @@ export default function ApplyPage() {
 
     setFormData((previous) => ({
       ...previous,
-      [name]: files
-        ? files[0]
-        : value,
+      [name]: files ? files[0] : value,
     }));
 
     setErrors((previous) => ({
@@ -96,18 +89,9 @@ export default function ApplyPage() {
   function validateForm() {
     const newErrors = {};
 
-    if (
-      !formData.businessName.trim()
-    ) {
+    if (!formData.businessName.trim()) {
       newErrors.businessName =
         "Business name is required.";
-    }
-
-    if (
-      !formData.contactPerson.trim()
-    ) {
-      newErrors.contactPerson =
-        "Contact person is required.";
     }
 
     if (!formData.mobile.trim()) {
@@ -125,19 +109,9 @@ export default function ApplyPage() {
         "Please select a category.";
     }
 
-    if (
-      !formData.description.trim()
-    ) {
-      newErrors.description =
-        "Please describe your business.";
-    }
-
     setErrors(newErrors);
 
-    return (
-      Object.keys(newErrors)
-        .length === 0
-    );
+    return Object.keys(newErrors).length === 0;
   }
 
   async function handleSubmit(event) {
@@ -151,15 +125,19 @@ export default function ApplyPage() {
     }
 
     setSubmitting(true);
-    console.log("Submitting application:", formData);
+
+    console.log(
+      "Submitting application:",
+      formData
+    );
+
     try {
       const response = await fetch(
         "/api/applications",
         {
           method: "POST",
           headers: {
-            "Content-Type":
-              "application/json",
+            "Content-Type": "application/json",
           },
           body: JSON.stringify({
             businessName:
@@ -168,11 +146,9 @@ export default function ApplyPage() {
             contactPerson:
               formData.contactPerson,
 
-            mobile:
-              formData.mobile,
+            mobile: formData.mobile,
 
-            email:
-              formData.email,
+            email: formData.email,
 
             /*
              * IMPORTANT:
@@ -194,8 +170,7 @@ export default function ApplyPage() {
         }
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
       if (!response.ok) {
         setErrorMessage(
@@ -235,30 +210,117 @@ export default function ApplyPage() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50">
-
+    <main className="min-h-screen overflow-x-hidden bg-[#f8f1e6] text-[#42151c]">
       {/* =====================================================
           HEADER
       ====================================================== */}
 
-      <section className="bg-slate-950 px-6 py-16 text-white">
-        <div className="mx-auto max-w-4xl text-center">
+      <header className="sticky top-0 z-50 border-b border-[#7d1727]/10 bg-[#f8f1e6]/95 backdrop-blur">
+        <div className="mx-auto flex h-[68px] max-w-6xl items-center justify-between px-5 sm:px-8">
+          {/* Brand */}
+          <a href="/" className="flex items-center gap-3">
+            <div className="relative flex h-10 w-10 items-center justify-center">
+              <div className="absolute inset-0 rounded-full border border-[#a77932]/50" />
 
-          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.25em] text-amber-400">
-            Exhibition 2026
-          </p>
+              <span className="font-serif text-lg font-bold text-[#7d1727]">
+                Y
+              </span>
+            </div>
 
-          <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-            Exhibitor Application
+            <div>
+              <p className="font-serif text-[18px] font-semibold leading-none text-[#7d1727]">
+                Yarn Tree
+              </p>
+
+              <p className="mt-1 text-[7px] font-bold uppercase tracking-[0.25em] text-[#465337]">
+                Exhibition & Sale
+              </p>
+            </div>
+          </a>
+
+          <a
+            href="/"
+            className="hidden text-[10px] font-bold uppercase tracking-[0.15em] text-[#7d1727] sm:block"
+          >
+            ← Back to Event
+          </a>
+        </div>
+      </header>
+
+      {/* =====================================================
+          PAGE INTRO
+      ====================================================== */}
+
+      <section className="relative overflow-hidden px-5 pb-8 pt-10 sm:px-8 sm:pb-10 sm:pt-14">
+        {/* Decorative circles */}
+        <div className="pointer-events-none absolute -left-20 top-0 h-48 w-48 rounded-full bg-[#7d1727]/5 blur-3xl" />
+
+        <div className="pointer-events-none absolute -right-20 top-10 h-56 w-56 rounded-full bg-[#465337]/10 blur-3xl" />
+
+        <div className="relative mx-auto max-w-3xl text-center">
+          <div className="mx-auto mb-5 flex w-fit items-center gap-3">
+            <span className="h-px w-7 bg-[#a77932]" />
+
+            <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-[#7d1727]">
+              Christmas Street '26
+            </p>
+
+            <span className="h-px w-7 bg-[#a77932]" />
+          </div>
+
+          <h1 className="font-serif text-[46px] leading-[0.9] text-[#7d1727] sm:text-6xl">
+            Apply to Exhibit
           </h1>
 
-          <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
-            Tell us about your business and apply
-            for your exhibition stall. Our team
-            will review your application and get
-            back to you.
+          <p className="mt-4 font-serif text-lg italic text-[#62524b] sm:text-xl">
+            Bring your brand to Christmas Street.
           </p>
 
+          <p className="mx-auto mt-4 max-w-xl text-sm leading-6 text-[#806d64]">
+            Tell us about your business and apply for
+            your exhibition stall. Our team will review
+            your application and get back to you.
+          </p>
+        </div>
+      </section>
+
+      {/* =====================================================
+          EVENT STRIP
+      ====================================================== */}
+
+      <section className="px-4 pb-7 sm:px-6">
+        <div className="mx-auto max-w-3xl rounded-2xl border border-[#a77932]/30 bg-[#efe5d6] px-4 py-4 sm:px-6">
+          <div className="grid grid-cols-3 divide-x divide-[#7d1727]/10 text-center">
+            <div className="px-2">
+              <p className="text-[8px] font-bold uppercase tracking-[0.12em] text-[#7d1727]">
+                Date
+              </p>
+
+              <p className="mt-1 font-serif text-sm text-[#42151c] sm:text-base">
+                Nov 20 & 21
+              </p>
+            </div>
+
+            <div className="px-2">
+              <p className="text-[8px] font-bold uppercase tracking-[0.12em] text-[#7d1727]">
+                Venue
+              </p>
+
+              <p className="mt-1 font-serif text-sm text-[#42151c] sm:text-base">
+                Chakolas Pavilion
+              </p>
+            </div>
+
+            <div className="px-2">
+              <p className="text-[8px] font-bold uppercase tracking-[0.12em] text-[#7d1727]">
+                Location
+              </p>
+
+              <p className="mt-1 font-serif text-sm text-[#42151c] sm:text-base">
+                Thrissur
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -266,42 +328,46 @@ export default function ApplyPage() {
           FORM
       ====================================================== */}
 
-      <section className="px-4 py-10 sm:px-6 lg:py-16">
-
-        <div className="mx-auto max-w-4xl">
-
+      <section className="px-4 pb-16 sm:px-6 lg:pb-24">
+        <div className="mx-auto max-w-3xl">
           <form
             onSubmit={handleSubmit}
-            className="overflow-hidden rounded-2xl bg-white shadow-xl ring-1 ring-slate-200"
+            className="overflow-hidden rounded-[28px] border border-[#7d1727]/10 bg-[#fffaf3] shadow-xl shadow-[#42151c]/5"
           >
+            {/* =================================================
+                FORM HEADER
+            ================================================== */}
+
+            <div className="border-b border-[#7d1727]/10 px-5 py-6 sm:px-8">
+              <div className="flex items-start gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#7d1727] font-serif text-lg text-white">
+                  1
+                </div>
+
+                <div>
+                  <h2 className="font-serif text-2xl text-[#42151c]">
+                    Business Information
+                  </h2>
+
+                  <p className="mt-1 text-xs leading-5 text-[#806d64]">
+                    Please provide your business details.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             {/* =================================================
                 BUSINESS INFORMATION
             ================================================== */}
 
-            <div className="border-b border-slate-200 p-6 sm:p-8">
-
-              <div className="mb-7">
-
-                <h2 className="text-xl font-bold text-slate-900">
-                  Business Information
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  Please provide your business details.
-                </p>
-
-              </div>
-
-              <div className="space-y-6">
-
+            <div className="px-5 py-6 sm:px-8 sm:py-8">
+              <div className="space-y-5">
                 {/* Business Name */}
 
                 <div>
-
                   <label
                     htmlFor="businessName"
-                    className="mb-2 block text-sm font-semibold text-slate-700"
+                    className="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-[#62524b]"
                   >
                     Business Name *
                   </label>
@@ -313,34 +379,29 @@ export default function ApplyPage() {
                     value={
                       formData.businessName
                     }
-                    onChange={
-                      handleChange
-                    }
+                    onChange={handleChange}
                     placeholder="Enter your business name"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+                    className={inputClass(
+                      errors.businessName
+                    )}
                   />
 
                   {errors.businessName && (
-                    <p className="mt-2 text-sm text-red-600">
-                      {
-                        errors.businessName
-                      }
-                    </p>
+                    <ErrorMessage>
+                      {errors.businessName}
+                    </ErrorMessage>
                   )}
-
                 </div>
 
                 {/* Contact + Mobile */}
 
-                <div className="grid gap-6 sm:grid-cols-2">
-
+                <div className="grid gap-5 sm:grid-cols-2">
                   <div>
-
                     <label
                       htmlFor="contactPerson"
-                      className="mb-2 block text-sm font-semibold text-slate-700"
+                      className="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-[#62524b]"
                     >
-                      Contact Person *
+                      Contact Person
                     </label>
 
                     <input
@@ -350,28 +411,24 @@ export default function ApplyPage() {
                       value={
                         formData.contactPerson
                       }
-                      onChange={
-                        handleChange
-                      }
+                      onChange={handleChange}
                       placeholder="Full name"
-                      className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+                      className={inputClass(
+                        errors.contactPerson
+                      )}
                     />
 
                     {errors.contactPerson && (
-                      <p className="mt-2 text-sm text-red-600">
-                        {
-                          errors.contactPerson
-                        }
-                      </p>
+                      <ErrorMessage>
+                        {errors.contactPerson}
+                      </ErrorMessage>
                     )}
-
                   </div>
 
                   <div>
-
                     <label
                       htmlFor="mobile"
-                      className="mb-2 block text-sm font-semibold text-slate-700"
+                      className="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-[#62524b]"
                     >
                       Mobile Number *
                     </label>
@@ -383,30 +440,27 @@ export default function ApplyPage() {
                       value={
                         formData.mobile
                       }
-                      onChange={
-                        handleChange
-                      }
+                      onChange={handleChange}
                       placeholder="+91 XXXXX XXXXX"
-                      className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+                      className={inputClass(
+                        errors.mobile
+                      )}
                     />
 
                     {errors.mobile && (
-                      <p className="mt-2 text-sm text-red-600">
+                      <ErrorMessage>
                         {errors.mobile}
-                      </p>
+                      </ErrorMessage>
                     )}
-
                   </div>
-
                 </div>
 
                 {/* Email */}
 
                 <div>
-
                   <label
                     htmlFor="email"
-                    className="mb-2 block text-sm font-semibold text-slate-700"
+                    className="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-[#62524b]"
                   >
                     Email Address *
                   </label>
@@ -415,49 +469,45 @@ export default function ApplyPage() {
                     id="email"
                     name="email"
                     type="email"
-                    value={
-                      formData.email
-                    }
-                    onChange={
-                      handleChange
-                    }
+                    value={formData.email}
+                    onChange={handleChange}
                     placeholder="you@example.com"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+                    className={inputClass(
+                      errors.email
+                    )}
                   />
 
                   {errors.email && (
-                    <p className="mt-2 text-sm text-red-600">
+                    <ErrorMessage>
                       {errors.email}
-                    </p>
+                    </ErrorMessage>
                   )}
-
                 </div>
 
                 {/* =================================================
-                    DYNAMIC CATEGORY
+                    CATEGORY
                 ================================================== */}
 
-                <div>
-
-                  <label className="mb-3 block text-sm font-semibold text-slate-700">
+                <div className="pt-2">
+                  <label className="mb-3 block text-xs font-bold uppercase tracking-[0.08em] text-[#62524b]">
                     Business Category *
                   </label>
 
                   {categoriesLoading ? (
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-500">
+                    <div className="flex items-center gap-3 rounded-2xl border border-[#7d1727]/10 bg-[#f8f1e6] px-4 py-5 text-sm text-[#806d64]">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#7d1727]/20 border-t-[#7d1727]" />
+
                       Loading categories...
                     </div>
                   ) : categories.length === 0 ? (
-                    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-600">
+                    <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-600">
                       No categories are currently
                       available. Please try again later.
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-
+                    <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4">
                       {categories.map(
                         (category) => {
-
                           const selected =
                             formData.categoryId ===
                             String(
@@ -469,13 +519,12 @@ export default function ApplyPage() {
                               key={
                                 category._id
                               }
-                              className={`cursor-pointer rounded-xl border px-4 py-4 text-center text-sm font-semibold transition ${
+                              className={`relative flex min-h-[72px] cursor-pointer items-center justify-center rounded-2xl border px-3 py-3 text-center transition active:scale-[0.98] ${
                                 selected
-                                  ? "border-slate-950 bg-slate-950 text-white"
-                                  : "border-slate-300 bg-white text-slate-700 hover:border-slate-500"
+                                  ? "border-[#7d1727] bg-[#7d1727] text-white shadow-md shadow-[#7d1727]/15"
+                                  : "border-[#7d1727]/10 bg-[#f8f1e6] text-[#62524b] hover:border-[#7d1727]/30 hover:bg-white"
                               }`}
                             >
-
                               <input
                                 type="radio"
                                 name="categoryId"
@@ -491,63 +540,67 @@ export default function ApplyPage() {
                                 className="sr-only"
                               />
 
-                              {
-                                category.name
-                              }
+                              <span className="text-xs font-bold leading-4 sm:text-sm">
+                                {
+                                  category.name
+                                }
+                              </span>
 
+                              {selected && (
+                                <span className="absolute right-2 top-2 flex h-4 w-4 items-center justify-center rounded-full bg-white/20 text-[9px]">
+                                  ✓
+                                </span>
+                              )}
                             </label>
                           );
                         }
                       )}
-
                     </div>
                   )}
 
                   {errors.categoryId && (
-                    <p className="mt-2 text-sm text-red-600">
-                      {
-                        errors.categoryId
-                      }
-                    </p>
+                    <ErrorMessage>
+                      {errors.categoryId}
+                    </ErrorMessage>
                   )}
-
                 </div>
 
                 {/* Description */}
 
-                <div>
-
+                <div className="pt-2">
                   <label
                     htmlFor="description"
-                    className="mb-2 block text-sm font-semibold text-slate-700"
+                    className="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-[#62524b]"
                   >
-                    Brief Business Description *
+                    Additional Items
                   </label>
+
+                  <p className="mb-2 text-xs leading-5 text-[#806d64]">
+                    Mention if you are bringing any
+                    additional items or equipment for
+                    the exhibition.
+                  </p>
 
                   <textarea
                     id="description"
                     name="description"
-                    rows={5}
+                    rows={4}
                     value={
                       formData.description
                     }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="Tell us briefly about your business, products and brand..."
-                    className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+                    onChange={handleChange}
+                    placeholder="Please mention any additional items/equipment you plan to bring..."
+                    className={`${inputClass(
+                      errors.description
+                    )} resize-none`}
                   />
 
                   {errors.description && (
-                    <p className="mt-2 text-sm text-red-600">
-                      {
-                        errors.description
-                      }
-                    </p>
+                    <ErrorMessage>
+                      {errors.description}
+                    </ErrorMessage>
                   )}
-
                 </div>
-
               </div>
             </div>
 
@@ -555,164 +608,94 @@ export default function ApplyPage() {
                 SOCIAL MEDIA
             ================================================== */}
 
-            <div className="border-b border-slate-200 p-6 sm:p-8">
-
-              <div className="mb-7">
-
-                <h2 className="text-xl font-bold text-slate-900">
-                  Social Media
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  Help us learn more about your brand.
-                </p>
-
-              </div>
-
-              <div className="grid gap-6 sm:grid-cols-2">
-
-                {/* Instagram */}
+            <div className="border-t border-[#7d1727]/10 px-5 py-6 sm:px-8 sm:py-8">
+              <div className="mb-5 flex items-start gap-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#465337] font-serif text-lg text-white">
+                  2
+                </div>
 
                 <div>
+                  <h2 className="font-serif text-2xl text-[#42151c]">
+                    Your Brand
+                  </h2>
 
-                  <label
-                    htmlFor="instagram"
-                    className="mb-2 block text-sm font-semibold text-slate-700"
-                  >
-                    Instagram Profile
-                  </label>
-
-                  <input
-                    id="instagram"
-                    name="instagram"
-                    type="text"
-                    value={
-                      formData.instagram
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="@yourbrand"
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
-                  />
-
+                  <p className="mt-1 text-xs leading-5 text-[#806d64]">
+                    Help us learn a little more about
+                    your brand.
+                  </p>
                 </div>
-
-                {/* Other social */}
-
-                <div>
-
-                  <label
-                    htmlFor="socialMedia"
-                    className="mb-2 block text-sm font-semibold text-slate-700"
-                  >
-                    Other Social Media
-                  </label>
-
-                  <input
-                    id="socialMedia"
-                    name="socialMedia"
-                    type="text"
-                    value={
-                      formData.socialMedia
-                    }
-                    onChange={
-                      handleChange
-                    }
-                    placeholder="Facebook, website, etc."
-                    className="w-full rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
-                  />
-
-                </div>
-
-              </div>
-            </div>
-
-            {/* =================================================
-                LOGO
-            ================================================== */}
-
-            {/* <div className="border-b border-slate-200 p-6 sm:p-8">
-
-              <div className="mb-7">
-
-                <h2 className="text-xl font-bold text-slate-900">
-                  Brand Logo
-
-                  <span className="ml-2 text-sm font-normal text-slate-400">
-                    Optional
-                  </span>
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  Upload your business logo or brand image.
-                </p>
-
               </div>
 
-              <label
-                htmlFor="logo"
-                className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 px-6 py-10 text-center transition hover:border-slate-500 hover:bg-slate-50"
-              >
-
-                <div className="mb-3 text-3xl">
-                  ↑
-                </div>
-
-                <p className="font-semibold text-slate-700">
-                  Click to upload your logo
-                </p>
-
-                <p className="mt-1 text-xs text-slate-500">
-                  PNG, JPG or WEBP
-                </p>
+              <div>
+                <label
+                  htmlFor="instagram"
+                  className="mb-2 block text-xs font-bold uppercase tracking-[0.08em] text-[#62524b]"
+                >
+                  Instagram Profile
+                </label>
 
                 <input
-                  id="logo"
-                  name="logo"
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  onChange={
-                    handleChange
+                  id="instagram"
+                  name="instagram"
+                  type="text"
+                  value={
+                    formData.instagram
                   }
-                  className="hidden"
+                  onChange={handleChange}
+                  placeholder="@yourbrand"
+                  className={inputClass()}
                 />
 
-                {formData.logo && (
-                  <p className="mt-4 text-sm font-medium text-green-600">
-                    {formData.logo.name}
-                  </p>
-                )}
-
-              </label>
-            </div> */}
+                <p className="mt-2 text-[11px] leading-5 text-[#806d64]">
+                  Optional — share your Instagram
+                  handle so our team can learn more
+                  about your brand.
+                </p>
+              </div>
+            </div>
 
             {/* =================================================
                 MESSAGES
             ================================================== */}
 
-            <div className="px-6 pt-6 sm:px-8">
+            {(successMessage ||
+              errorMessage) && (
+              <div className="border-t border-[#7d1727]/10 px-5 pt-6 sm:px-8">
+                {successMessage && (
+                  <div className="rounded-2xl border border-green-200 bg-green-50 px-4 py-4 text-sm font-medium leading-6 text-green-700">
+                    <div className="flex gap-3">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-green-600 text-xs text-white">
+                        ✓
+                      </span>
 
-              {successMessage && (
-                <div className="rounded-xl border border-green-200 bg-green-50 px-4 py-4 text-sm font-medium text-green-700">
-                  {successMessage}
-                </div>
-              )}
+                      <span>
+                        {successMessage}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
-              {errorMessage && (
-                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-sm font-medium text-red-700">
-                  {errorMessage}
-                </div>
-              )}
+                {errorMessage && (
+                  <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-4 text-sm font-medium leading-6 text-red-700">
+                    <div className="flex gap-3">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-600 text-xs text-white">
+                        !
+                      </span>
 
-            </div>
+                      <span>
+                        {errorMessage}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* =================================================
                 SUBMIT
             ================================================== */}
 
-            <div className="mt-6 bg-slate-50 p-6 sm:p-8">
-
+            <div className="mt-6 border-t border-[#7d1727]/10 bg-[#efe5d6] px-5 py-6 sm:px-8 sm:py-8">
               <button
                 type="submit"
                 disabled={
@@ -720,28 +703,79 @@ export default function ApplyPage() {
                   categoriesLoading ||
                   categories.length === 0
                 }
-                className="w-full rounded-xl bg-slate-950 px-6 py-4 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                className="group flex w-full items-center justify-center gap-3 rounded-full bg-[#7d1727] px-6 py-4 text-xs font-bold uppercase tracking-[0.12em] text-white shadow-lg shadow-[#7d1727]/15 transition hover:bg-[#65121f] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {submitting
-                  ? "Submitting Application..."
-                  : "Submit Application"}
+                {submitting ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+
+                    Submitting Application...
+                  </>
+                ) : (
+                  <>
+                    Submit Application
+
+                    <span className="text-base transition-transform group-hover:translate-x-1">
+                      →
+                    </span>
+                  </>
+                )}
               </button>
 
-              <p className="mt-4 text-center text-xs leading-5 text-slate-500">
-                By submitting this application,
-                you agree that the information
-                provided may be reviewed by the
-                exhibition organizers.
+              <p className="mx-auto mt-4 max-w-md text-center text-[10px] leading-5 text-[#806d64]">
+                By submitting this application, you
+                agree that the information provided may
+                be reviewed by the exhibition organizers.
               </p>
-
             </div>
-
           </form>
-
         </div>
-
       </section>
 
+      {/* =====================================================
+          FOOTER
+      ====================================================== */}
+
+      <footer className="border-t border-[#7d1727]/10 bg-[#efe5d6]">
+        <div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-5 py-7 text-center">
+          <p className="font-serif text-lg text-[#7d1727]">
+            Christmas Street '26
+          </p>
+
+          <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#465337]">
+            Yarn Tree Exhibition & Sale
+          </p>
+
+          <p className="mt-2 text-[9px] text-[#806d64]">
+            November 20 & 21 · Chakolas Pavilion ·
+            Thrissur
+          </p>
+        </div>
+      </footer>
     </main>
+  );
+}
+
+/* =========================================================
+   INPUT STYLE
+========================================================= */
+
+function inputClass(error) {
+  return `w-full rounded-2xl border bg-[#f8f1e6] px-4 py-3.5 text-sm text-[#42151c] placeholder:text-[#a2948c] outline-none transition focus:bg-white focus:ring-4 ${
+    error
+      ? "border-red-300 focus:border-red-400 focus:ring-red-100"
+      : "border-[#7d1727]/10 focus:border-[#7d1727]/40 focus:ring-[#7d1727]/5"
+  }`;
+}
+
+/* =========================================================
+   ERROR MESSAGE
+========================================================= */
+
+function ErrorMessage({ children }) {
+  return (
+    <p className="mt-2 text-xs font-medium text-red-600">
+      {children}
+    </p>
   );
 }

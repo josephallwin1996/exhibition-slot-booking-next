@@ -684,6 +684,12 @@ function SlotCard({
         ).toLocaleString("en-IN")}
       </span>
 
+      {/* Price */}
+
+      <span className="mt-1 text-[8px] opacity-60 sm:text-[9px]">
+        Size: 6 X 6 ft
+      </span>
+
     </button>
   );
 }

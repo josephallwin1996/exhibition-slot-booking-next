@@ -10,7 +10,7 @@ const applicationSchema = new mongoose.Schema(
 
     contactPerson: {
       type: String,
-      required: true,
+      default: "",
       trim: true,
     },
 
@@ -44,8 +44,8 @@ const applicationSchema = new mongoose.Schema(
 
     description: {
       type: String,
-      required: true,
       trim: true,
+      default: ""
     },
 
     instagram: {
