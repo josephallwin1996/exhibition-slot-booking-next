@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 export default function HomePage() {
 
@@ -55,24 +56,41 @@ export default function HomePage() {
           {/* Brand */}
           <a href="/" className="group">
             <div className="flex items-center gap-3">
-              <div className="relative flex h-10 w-10 items-center justify-center">
-                <div className="absolute inset-0 rounded-full border border-[#a77932]/50" />
+              {/* <div className="relative flex h-10 w-10 items-center justify-center"> */}
+                {/* <div className="absolute inset-0 rounded-full border border-[#a77932]/50" /> */}
 
-                <span className="font-serif text-lg font-bold text-[#7d1727]">
-                  Y
-                </span>
-              </div>
+                <Image
+                  src="/logo.png"
+                  alt="Exhibition Logo"
+                  width={75}
+                  height={75}
+                  //className="relative h-8 w-8 object-contain"
+                />
+                
+              {/* </div> */}
 
               <div>
                 <p className="font-serif text-[18px] font-semibold leading-none text-[#7d1727]">
-                  Yarn Tree
+                  Yarntree
                 </p>
 
                 <p className="mt-1 text-[7px] font-bold uppercase tracking-[0.25em] text-[#465337]">
                   Exhibition & Sale
                 </p>
+                <p className="mt-1 text-[7px] font-bold uppercase tracking-[0.25em] text-[#465337]">
+                  9th Edition
+                </p>
               </div>
             </div>
+            {/* <div className="flex items-center gap-3">
+                <Image
+                  src="/logo1.png"
+                  alt="Exhibition Logo"
+                  width={75}
+                  height={75}
+                  className="relative h-8 w-8 object-contain"
+                />
+            </div> */}
           </a>
 
           {/* Desktop navigation */}
@@ -133,7 +151,7 @@ export default function HomePage() {
               <span className="h-px w-8 bg-[#a77932]" />
 
               <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-[#7d1727]">
-                Yarn Tree × Chakolas Pavilion
+                Yarntree × Chakolas Pavilion
               </p>
 
               <span className="h-px w-8 bg-[#a77932]" />
@@ -201,13 +219,15 @@ export default function HomePage() {
               {/* Central poster content */}
               <div className="absolute inset-x-5 top-[17%] text-center sm:inset-x-8">
                 <p className="font-serif text-[13px] font-semibold uppercase tracking-[0.18em] text-[#7d1727] sm:text-sm">
-                  Yarn Tree
+                  Yarntree
                 </p>
 
                 <p className="mt-1 text-[7px] font-bold uppercase tracking-[0.25em] text-[#465337]">
                   Exhibition & Sale
                 </p>
-
+                <p className="mt-1 text-[7px] font-bold uppercase tracking-[0.25em] text-[#465337]">
+                  9th Edition
+                </p>
                 <div className="mx-auto my-6 flex items-center justify-center gap-4">
                   <span className="h-px w-10 bg-[#a77932]" />
 
@@ -256,7 +276,7 @@ export default function HomePage() {
                   </p>
 
                   <p className="mt-1 text-[8px] text-[#62524b]">
-                    Anjeri Chira, Thrissur
+                    Anchery Chira Thrissur
                   </p>
                 </div>
               </div>
@@ -312,7 +332,7 @@ export default function HomePage() {
               icon={<LocationIcon />}
               label="Venue"
               value="Chakolas Pavilion"
-              detail="Anjeri Chira, Thrissur"
+              detail="Anchery Chira Thrissur"
             />
 
             <EventCard
@@ -420,12 +440,22 @@ export default function HomePage() {
             </div>
 
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {categories.map((category) => (
+              {/* {categories.map((category) => (
+                <CategoryCard
+                  key={category._id}
+                  label={category.name}
+                />
+              ))} */}
+
+              {categories
+              .filter((category) => category.slug !== "shared-stall")
+              .map((category) => (
                 <CategoryCard
                   key={category._id}
                   label={category.name}
                 />
               ))}
+
               {/* <CategoryCard label="Fashion" />
               <CategoryCard label="Home" />
               <CategoryCard label="Lifestyle" />
@@ -489,7 +519,10 @@ export default function HomePage() {
               </p>
 
               <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.18em] text-[#465337]">
-                Yarn Tree Exhibition & Sale
+                Yarntree Exhibition & Sale
+              </p>
+              <p className="mt-1 text-[9px] font-bold uppercase tracking-[0.18em] text-[#465337]">
+                9th Edition
               </p>
             </div>
 
@@ -508,7 +541,7 @@ export default function HomePage() {
           </div>
 
           <div className="mt-7 border-t border-[#7d1727]/10 pt-5 text-center text-[9px] text-[#806d64] sm:text-left">
-            © 2026 Yarn Tree Exhibition & Sale. All rights reserved.
+            © 2026 Yarntree Exhibition & Sale. All rights reserved.
           </div>
         </div>
       </footer>

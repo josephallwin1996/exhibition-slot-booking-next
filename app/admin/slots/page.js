@@ -14,9 +14,14 @@ const statusStyles = {
     dot: "bg-green-500",
   },
 
+  // booked: {
+  //   card: "border-blue-200 bg-blue-50 text-blue-800",
+  //   dot: "bg-blue-500",
+  // },
+
   booked: {
-    card: "border-blue-200 bg-blue-50 text-blue-800",
-    dot: "bg-blue-500",
+    card: "border-red-200 bg-red-50 text-red-800",
+    dot: "bg-red-500",
   },
 
   unavailable: {
@@ -382,7 +387,7 @@ export default function SlotsPage() {
                 />
 
                 <Legend
-                  dot="bg-blue-500"
+                  dot="bg-red-500"
                   label="Booked"
                 />
 
