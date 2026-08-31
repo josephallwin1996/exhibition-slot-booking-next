@@ -1,39 +1,18 @@
-import {
-  sendWhatsAppText,
-} from "@/lib/whatsapp";
+import { sendWhatsAppTemplate } from "@/lib/whatsapp";
 
 export async function GET() {
   try {
-    const adminNumber =
-      process.env.WHATSAPP_ADMIN_NUMBER;
-
-    if (!adminNumber) {
-      return Response.json(
-        {
-          success: false,
-          message:
-            "WHATSAPP_ADMIN_NUMBER is not configured.",
-        },
-        {
-          status: 500,
-        }
-      );
-    }
-
     const result =
-      await sendWhatsAppText({
-        to: adminNumber,
-
-        message:
-          "Hello! 👋\n\n" +
-          "This is a test WhatsApp notification from the Exhibition Booking System.\n\n" +
-          "WhatsApp integration is working successfully.",
+      await sendWhatsAppTemplate({
+        to: "919645395716",
+        templateName: "hello_world",
+        languageCode: "en",
       });
 
     return Response.json({
       success: true,
       message:
-        "WhatsApp test message sent successfully.",
+        "WhatsApp test template sent successfully.",
       result,
     });
   } catch (error) {
@@ -46,8 +25,8 @@ export async function GET() {
       {
         success: false,
         message:
-          error.message ||
-          "Unable to send WhatsApp test message.",
+          error?.message ||
+          "WhatsApp test failed.",
       },
       {
         status: 500,

@@ -19,6 +19,16 @@ import {
   sendBookingPaymentAdminEmail,
 } from "@/lib/email";
 
+import {
+  sendWhatsAppTemplate,
+} from "@/lib/whatsapp";
+
+/*
+ * =========================================================
+ * VERIFY RAZORPAY PAYMENT SIGNATURE
+ * =========================================================
+ */
+
 function verifyPaymentSignature(
   orderId,
   paymentId,
@@ -55,9 +65,48 @@ function verifyPaymentSignature(
   );
 }
 
+/*
+ * =========================================================
+ * NORMALIZE WHATSAPP NUMBER
+ * =========================================================
+ */
+
+function normalizeWhatsAppNumber(
+  mobile
+) {
+  if (!mobile) {
+    return null;
+  }
+
+  let number =
+    String(mobile).trim();
+
+  number = number.replace(
+    /[^\d]/g,
+    ""
+  );
+
+  /*
+   * Assuming Indian mobile numbers
+   * when only 10 digits are supplied.
+   */
+  if (number.length === 10) {
+    number = `91${number}`;
+  }
+
+  return number;
+}
+
+/*
+ * =========================================================
+ * PAYMENT VERIFICATION
+ * =========================================================
+ */
+
 export async function POST(request) {
   try {
-    const body = await request.json();
+    const body =
+      await request.json();
 
     const {
       bookingReference,
@@ -65,6 +114,12 @@ export async function POST(request) {
       razorpayOrderId,
       razorpaySignature,
     } = body;
+
+    /*
+     * -------------------------------------------------------
+     * Validate request
+     * -------------------------------------------------------
+     */
 
     if (
       !bookingReference ||
@@ -87,8 +142,11 @@ export async function POST(request) {
     await connectDB();
 
     /*
-     * Find our booking.
+     * -------------------------------------------------------
+     * Find booking
+     * -------------------------------------------------------
      */
+
     const booking =
       await Booking.findOne({
         bookingReference,
@@ -98,7 +156,8 @@ export async function POST(request) {
       return Response.json(
         {
           success: false,
-          message: "Booking not found.",
+          message:
+            "Booking not found.",
         },
         {
           status: 404,
@@ -107,11 +166,11 @@ export async function POST(request) {
     }
 
     /*
-     * Idempotency:
-     *
-     * If payment has already been verified,
-     * don't process it again.
+     * -------------------------------------------------------
+     * Idempotency
+     * -------------------------------------------------------
      */
+
     if (
       booking.status === "paid" &&
       booking.paymentStatus === "paid"
@@ -143,8 +202,11 @@ export async function POST(request) {
     }
 
     /*
-     * Booking must be waiting for payment.
+     * -------------------------------------------------------
+     * Booking must be awaiting payment
+     * -------------------------------------------------------
      */
+
     if (
       booking.status !==
       "pending_payment"
@@ -162,9 +224,11 @@ export async function POST(request) {
     }
 
     /*
-     * We must already have created a
-     * Razorpay order for this booking.
+     * -------------------------------------------------------
+     * Verify Razorpay order exists
+     * -------------------------------------------------------
      */
+
     if (!booking.razorpayOrderId) {
       return Response.json(
         {
@@ -179,9 +243,11 @@ export async function POST(request) {
     }
 
     /*
-     * Verify that the order returned by the
-     * browser belongs to OUR booking.
+     * -------------------------------------------------------
+     * Verify order belongs to booking
+     * -------------------------------------------------------
      */
+
     if (
       booking.razorpayOrderId !==
       razorpayOrderId
@@ -197,6 +263,12 @@ export async function POST(request) {
         }
       );
     }
+
+    /*
+     * -------------------------------------------------------
+     * Razorpay secret
+     * -------------------------------------------------------
+     */
 
     const secret =
       process.env.RAZORPAY_KEY_SECRET;
@@ -219,10 +291,12 @@ export async function POST(request) {
     }
 
     /*
+     * -------------------------------------------------------
      * STEP 1
-     *
-     * Verify Razorpay signature.
+     * Verify signature
+     * -------------------------------------------------------
      */
+
     const signatureValid =
       verifyPaymentSignature(
         booking.razorpayOrderId,
@@ -250,13 +324,12 @@ export async function POST(request) {
     }
 
     /*
+     * -------------------------------------------------------
      * STEP 2
-     *
-     * Fetch the actual payment from Razorpay.
-     *
-     * This uses the server-side Razorpay
-     * credentials.
+     * Fetch actual payment from Razorpay
+     * -------------------------------------------------------
      */
+
     const payment =
       await razorpay.payments.fetch(
         razorpayPaymentId
@@ -276,10 +349,12 @@ export async function POST(request) {
     }
 
     /*
+     * -------------------------------------------------------
      * STEP 3
-     *
-     * Verify payment ID.
+     * Verify payment ID
+     * -------------------------------------------------------
      */
+
     if (
       payment.id !==
       razorpayPaymentId
@@ -297,10 +372,12 @@ export async function POST(request) {
     }
 
     /*
+     * -------------------------------------------------------
      * STEP 4
-     *
-     * Verify order ID.
+     * Verify order ID
+     * -------------------------------------------------------
      */
+
     if (
       payment.order_id !==
       booking.razorpayOrderId
@@ -318,12 +395,12 @@ export async function POST(request) {
     }
 
     /*
+     * -------------------------------------------------------
      * STEP 5
-     *
-     * Verify amount.
-     *
-     * Razorpay uses paise for INR.
+     * Verify amount
+     * -------------------------------------------------------
      */
+
     const expectedAmount =
       Math.round(
         Number(booking.total) * 100
@@ -356,10 +433,12 @@ export async function POST(request) {
     }
 
     /*
+     * -------------------------------------------------------
      * STEP 6
-     *
-     * Verify currency.
+     * Verify currency
+     * -------------------------------------------------------
      */
+
     if (
       payment.currency !==
       "INR"
@@ -377,12 +456,12 @@ export async function POST(request) {
     }
 
     /*
+     * -------------------------------------------------------
      * STEP 7
-     *
-     * Most important:
-     *
-     * Payment must actually be captured.
+     * Payment must be captured
+     * -------------------------------------------------------
      */
+
     if (
       payment.status !==
       "captured"
@@ -400,11 +479,12 @@ export async function POST(request) {
     }
 
     /*
+     * -------------------------------------------------------
      * STEP 8
-     *
-     * Make sure Razorpay says the payment
-     * was captured.
+     * Razorpay captured flag
+     * -------------------------------------------------------
      */
+
     if (
       payment.captured !== true
     ) {
@@ -421,13 +501,15 @@ export async function POST(request) {
     }
 
     /*
-     * EVERYTHING has passed.
+     * =======================================================
+     * PAYMENT VERIFIED
+     * =======================================================
      *
-     * Now and only now do we mark
-     * the booking as paid.
+     * Only now do we mark the booking as paid.
      */
 
-    booking.paidAt = new Date();
+    booking.paidAt =
+      new Date();
 
     booking.razorpayPaymentId =
       razorpayPaymentId;
@@ -446,122 +528,358 @@ export async function POST(request) {
 
     await booking.save();
 
+    /*
+     * =======================================================
+     * LOAD APPLICATION
+     * =======================================================
+     */
+
     const application =
-  await Application.findById(
-    booking.applicationId
-  ).lean();
+      await Application.findById(
+        booking.applicationId
+      ).lean();
 
-if (!application) {
-  console.error(
-    "Application not found for paid booking:",
-    booking.bookingReference
-  );
-} else {
-  /*
-   * Generate invoice number if this is
-   * the first successful payment processing.
-   */
-  if (!booking.invoiceNumber) {
-    const sequence =
-      Date.now() % 100000;
-
-    booking.invoiceNumber =
-      generateInvoiceNumber(
-        sequence
+    if (!application) {
+      console.error(
+        "Application not found for paid booking:",
+        booking.bookingReference
       );
+    } else {
+      /*
+       * =====================================================
+       * INVOICE
+       * =====================================================
+       */
 
-    booking.invoiceIssuedAt =
-      new Date();
+      if (!booking.invoiceNumber) {
+        const sequence =
+          Date.now() % 100000;
 
-    await booking.save();
-  }
+        booking.invoiceNumber =
+          generateInvoiceNumber(
+            sequence
+          );
 
-  /*
-   * Generate PDF.
-   */
-  const invoicePdf =
-    await generateInvoicePdf({
-      booking,
-      application,
-    });
+        booking.invoiceIssuedAt =
+          new Date();
 
-  /*
-   * Send payment email to exhibitor.
-   */
-  try {
-    await sendPaymentSuccessEmail({
-      name:
-        application.contactPerson,
+        await booking.save();
+      }
 
-      email:
-        application.email,
+      /*
+       * -----------------------------------------------------
+       * Generate invoice PDF
+       * -----------------------------------------------------
+       */
 
-      businessName:
-        application.businessName,
+      const invoicePdf =
+        await generateInvoicePdf({
+          booking,
+          application,
+        });
 
-      bookingReference:
-        booking.bookingReference,
+      /*
+       * =====================================================
+       * PAYMENT SUCCESS EMAIL — APPLICANT
+       * =====================================================
+       */
 
-      slotNumber:
-        booking.slotNumber,
+      try {
+        await sendPaymentSuccessEmail({
+          name:
+            application.contactPerson,
 
-      total:
-        booking.total,
+          email:
+            application.email,
 
-      paymentId:
-        booking.razorpayPaymentId,
+          businessName:
+            application.businessName,
 
-      paidAt:
-        booking.paidAt,
+          bookingReference:
+            booking.bookingReference,
 
-      invoiceNumber:
-        booking.invoiceNumber,
+          slotNumber:
+            booking.slotNumber,
 
-      invoicePdf,
-    });
-  } catch (emailError) {
-    console.error(
-      "Payment email failed:",
-      emailError
-    );
-  }
+          total:
+            booking.total,
 
-  /*
-   * Notify admin.
-   */
-  try {
-    await sendBookingPaymentAdminEmail({
-      businessName:
-        application.businessName,
+          paymentId:
+            booking.razorpayPaymentId,
 
-      contactPerson:
-        application.contactPerson,
+          paidAt:
+            booking.paidAt,
 
-      email:
-        application.email,
+          invoiceNumber:
+            booking.invoiceNumber,
 
-      bookingReference:
-        booking.bookingReference,
+          invoicePdf,
+        });
+      } catch (emailError) {
+        console.error(
+          "Payment email failed:",
+          emailError
+        );
+      }
 
-      slotNumber:
-        booking.slotNumber,
+      /*
+       * =====================================================
+       * PAYMENT SUCCESS EMAIL — ADMIN
+       * =====================================================
+       */
 
-      category:
-        booking.category,
+      try {
+        await sendBookingPaymentAdminEmail({
+          businessName:
+            application.businessName,
 
-      total:
-        booking.total,
+          contactPerson:
+            application.contactPerson,
 
-      paymentId:
-        booking.razorpayPaymentId,
-    });
-  } catch (emailError) {
-    console.error(
-      "Admin payment email failed:",
-      emailError
-    );
-  }
-}
+          email:
+            application.email,
+
+          bookingReference:
+            booking.bookingReference,
+
+          slotNumber:
+            booking.slotNumber,
+
+          category:
+            booking.category,
+
+          total:
+            booking.total,
+
+          paymentId:
+            booking.razorpayPaymentId,
+        });
+      } catch (emailError) {
+        console.error(
+          "Admin payment email failed:",
+          emailError
+        );
+      }
+
+      /*
+       * =====================================================
+       * WHATSAPP — APPLICANT
+       * =====================================================
+       *
+       * Template:
+       *
+       * booking_confirmed
+       *
+       * {{1}} Contact person
+       * {{2}} Business name
+       * {{3}} Booking reference
+       * {{4}} Stall number
+       * {{5}} Total
+       * {{6}} Payment ID
+       * =====================================================
+       */
+
+      const applicantWhatsApp =
+        normalizeWhatsAppNumber(
+          application.mobile
+        );
+
+      if (applicantWhatsApp) {
+        try {
+          await sendWhatsAppTemplate({
+            to:
+              applicantWhatsApp,
+
+            templateName:
+              "booking_confirmed",
+
+            languageCode:
+              "en",
+
+            components: [
+              {
+                type: "body",
+
+                parameters: [
+                  {
+                    type: "text",
+                    text:
+                      application.contactPerson,
+                  },
+
+                  {
+                    type: "text",
+                    text:
+                      application.businessName,
+                  },
+
+                  {
+                    type: "text",
+                    text:
+                      booking.bookingReference,
+                  },
+
+                  {
+                    type: "text",
+                    text:
+                      String(
+                        booking.slotNumber
+                      ),
+                  },
+
+                  {
+                    type: "text",
+                    text:
+                      String(
+                        booking.total
+                      ),
+                  },
+
+                  // {
+                  //   type: "text",
+                  //   text:
+                  //     booking.razorpayPaymentId,
+                  // },
+                ],
+              },
+            ],
+          });
+
+          console.log(
+            "Booking confirmation WhatsApp sent:",
+            applicantWhatsApp
+          );
+        } catch (whatsappError) {
+          /*
+           * IMPORTANT:
+           *
+           * WhatsApp failure must NOT
+           * affect the successful payment.
+           */
+
+          console.error(
+            "Booking confirmation WhatsApp error:",
+            whatsappError
+          );
+        }
+      } else {
+        console.warn(
+          "Booking confirmation WhatsApp skipped: invalid applicant mobile number."
+        );
+      }
+
+      /*
+       * =====================================================
+       * WHATSAPP — ADMIN
+       * =====================================================
+       *
+       * Template:
+       *
+       * payment_confirmed_admin
+       *
+       * {{1}} Business name
+       * {{2}} Contact person
+       * {{3}} Booking reference
+       * {{4}} Stall number
+       * {{5}} Total
+       * {{6}} Payment ID
+       * =====================================================
+       */
+
+      const adminWhatsApp =
+        normalizeWhatsAppNumber(
+          process.env
+            .WHATSAPP_ADMIN_NUMBER
+        );
+
+      if (adminWhatsApp) {
+        try {
+          await sendWhatsAppTemplate({
+            to:
+              adminWhatsApp,
+
+            templateName:
+              "payment_confirmed_admin",
+
+            languageCode:
+              "en",
+
+            components: [
+              {
+                type: "body",
+
+                parameters: [
+                  {
+                    type: "text",
+                    text:
+                      application.businessName,
+                  },
+
+                  {
+                    type: "text",
+                    text:
+                      application.contactPerson,
+                  },
+
+                  {
+                    type: "text",
+                    text:
+                      booking.bookingReference,
+                  },
+
+                  {
+                    type: "text",
+                    text:
+                      String(
+                        booking.slotNumber
+                      ),
+                  },
+
+                  {
+                    type: "text",
+                    text:
+                      String(
+                        booking.total
+                      ),
+                  },
+
+                  // {
+                  //   type: "text",
+                  //   text:
+                  //     booking.razorpayPaymentId,
+                  // },
+                ],
+              },
+            ],
+          });
+
+          console.log(
+            "Payment confirmation admin WhatsApp sent:",
+            adminWhatsApp
+          );
+        } catch (whatsappError) {
+          /*
+           * WhatsApp failure must NOT
+           * affect the successful payment.
+           */
+
+          console.error(
+            "Admin payment WhatsApp error:",
+            whatsappError
+          );
+        }
+      } else {
+        console.warn(
+          "Admin payment WhatsApp skipped: WHATSAPP_ADMIN_NUMBER is not configured."
+        );
+      }
+    }
+
+    /*
+     * =======================================================
+     * SUCCESS RESPONSE
+     * =======================================================
+     */
 
     return Response.json({
       success: true,

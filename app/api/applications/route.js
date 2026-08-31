@@ -7,9 +7,54 @@ import {
   sendNewApplicationAdminEmail,
 } from "@/lib/email";
 
+import {
+  sendWhatsAppTemplate,
+} from "@/lib/whatsapp";
+
+/*
+ * =========================================================
+ * NORMALIZE WHATSAPP NUMBER
+ * =========================================================
+ *
+ * Meta expects the phone number in international format
+ * without +, spaces, or other characters.
+ *
+ * Example:
+ * +91 9645395716
+ * becomes:
+ * 919645395716
+ *
+ * This assumes Indian numbers when the user enters
+ * a local 10-digit number.
+ */
+
+function normalizeWhatsAppNumber(
+  mobile
+) {
+  if (!mobile) {
+    return null;
+  }
+
+  let number = String(mobile).trim();
+
+  // Remove spaces, +, -, brackets, etc.
+  number = number.replace(
+    /[^\d]/g,
+    ""
+  );
+
+  // If exactly 10 digits, assume India.
+  if (number.length === 10) {
+    number = `91${number}`;
+  }
+
+  return number;
+}
+
 export async function POST(request) {
   try {
-    const body = await request.json();
+    const body =
+      await request.json();
 
     const {
       businessName,
@@ -50,9 +95,10 @@ export async function POST(request) {
     // Validate category
     // --------------------------------------------------
 
-    const category = await Category.findOne({
-      _id: categoryId,
-    }).lean();
+    const category =
+      await Category.findOne({
+        _id: categoryId,
+      }).lean();
 
     if (!category) {
       return Response.json(
@@ -78,8 +124,12 @@ export async function POST(request) {
     const existingApplication =
       await Application.findOne({
         email: normalizedEmail,
+
         status: {
-          $in: ["pending", "approved"],
+          $in: [
+            "pending",
+            "approved",
+          ],
         },
       });
 
@@ -118,7 +168,7 @@ export async function POST(request) {
           category._id,
 
         description:
-          description.trim(),
+          description?.trim() || "",
 
         instagram:
           instagram?.trim() || "",
@@ -128,6 +178,21 @@ export async function POST(request) {
 
         status: "pending",
       });
+
+    // --------------------------------------------------
+    // Application reference
+    // --------------------------------------------------
+    //
+    // We are not changing your Application model.
+    // For WhatsApp we use the MongoDB application ID
+    // as the reference for now.
+    //
+    // Later, if you already have an application reference
+    // field, we can replace this with that value.
+    //
+
+    const applicationReference =
+      String(application._id);
 
     // --------------------------------------------------
     // Emails
@@ -169,14 +234,200 @@ export async function POST(request) {
     }
 
     // --------------------------------------------------
+    // WhatsApp notifications
+    // --------------------------------------------------
+
+    const applicantWhatsApp =
+      normalizeWhatsAppNumber(
+        application.mobile
+      );
+
+    /*
+     * Applicant:
+     * application_submitted
+     *
+     * Template variables:
+     *
+     * {{1}} = Contact person
+     * {{2}} = Business name
+     * {{3}} = Application reference
+     */
+
+    if (applicantWhatsApp) {
+      try {
+        await sendWhatsAppTemplate({
+          to: applicantWhatsApp,
+
+          templateName:
+            "application_submitted",
+
+          languageCode:
+            "en",
+
+          components: [
+            {
+              type: "body",
+
+              parameters: [
+                {
+                  type: "text",
+                  text:
+                    application.contactPerson,
+                },
+
+                {
+                  type: "text",
+                  text:
+                    application.businessName,
+                },
+
+                {
+                  type: "text",
+                  text:
+                    applicationReference,
+                },
+              ],
+            },
+          ],
+        });
+
+        console.log(
+          "Application submitted WhatsApp sent:",
+          applicantWhatsApp
+        );
+      } catch (whatsappError) {
+        /*
+         * IMPORTANT:
+         *
+         * WhatsApp failure must NOT cause
+         * the application submission to fail.
+         */
+
+        console.error(
+          "Application submitted WhatsApp error:",
+          whatsappError
+        );
+      }
+    } else {
+      console.warn(
+        "WhatsApp notification skipped: invalid applicant mobile number."
+      );
+    }
+
+    // --------------------------------------------------
+    // Admin WhatsApp notification
+    // --------------------------------------------------
+
+    /*
+     * We will add the admin WhatsApp number
+     * through an environment variable.
+     *
+     * Example:
+     *
+     * WHATSAPP_ADMIN_NUMBER=919876543210
+     *
+     * Do NOT hard-code the admin number here.
+     */
+
+    const adminWhatsAppNumber =
+      normalizeWhatsAppNumber(
+        process.env.WHATSAPP_ADMIN_NUMBER
+      );
+
+    if (adminWhatsAppNumber) {
+      try {
+        /*
+         * Template variables:
+         *
+         * {{1}} = Business name
+         * {{2}} = Applicant/contact person
+         * {{3}} = Category
+         * {{4}} = Application reference
+         * {{5}} = Dashboard URL
+         */
+
+        await sendWhatsAppTemplate({
+            to: adminWhatsAppNumber,
+
+            templateName: "new_application_admin",
+
+            languageCode: "en",
+
+            components: [
+              {
+                type: "body",
+
+                parameters: [
+                  {
+                    type: "text",
+                    text: application.businessName,
+                  },
+
+                  {
+                    type: "text",
+                    text: application.contactPerson,
+                  },
+
+                  {
+                    type: "text",
+                    text: category.name,
+                  },
+
+                  {
+                    type: "text",
+                    text: applicationReference,
+                  },
+                ],
+              },
+
+              // URL BUTTON
+              {
+                type: "button",
+                sub_type: "url",
+                index: "0",
+
+                parameters: [
+                  {
+                    type: "text",
+                    text: `https://exhibition-slot-booking-next.vercel.app/admin/login`,
+                  },
+                ],
+              },
+            ],
+          });
+
+        console.log(
+          "New application admin WhatsApp sent:",
+          adminWhatsAppNumber
+        );
+      } catch (whatsappError) {
+        /*
+         * Again, WhatsApp failure must NOT
+         * affect application submission.
+         */
+
+        console.error(
+          "New application admin WhatsApp error:",
+          whatsappError
+        );
+      }
+    } else {
+      console.warn(
+        "Admin WhatsApp notification skipped: WHATSAPP_ADMIN_NUMBER is not configured."
+      );
+    }
+
+    // --------------------------------------------------
     // Response
     // --------------------------------------------------
 
     return Response.json(
       {
         success: true,
+
         message:
           "Application submitted successfully.",
+
         applicationId:
           application._id,
       },
