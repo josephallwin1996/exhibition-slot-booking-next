@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 
 export default function ApplyPage() {
   const [categories, setCategories] = useState([]);
@@ -219,21 +220,31 @@ export default function ApplyPage() {
         <div className="mx-auto flex h-[68px] max-w-6xl items-center justify-between px-5 sm:px-8">
           {/* Brand */}
           <a href="/" className="flex items-center gap-3">
-            <div className="relative flex h-10 w-10 items-center justify-center">
-              <div className="absolute inset-0 rounded-full border border-[#a77932]/50" />
-
-              <span className="font-serif text-lg font-bold text-[#7d1727]">
+            {/* <div className="relative flex h-10 w-10 items-center justify-center">
+              <div className="absolute inset-0 rounded-full border border-[#a77932]/50" /> */}
+              <Image
+                  src="/logo.png"
+                  alt="Exhibition Logo"
+                  width={75}
+                  height={75}
+                  loading="eager"
+                  //className="relative h-8 w-8 object-contain"
+                />
+              {/* <span className="font-serif text-lg font-bold text-[#7d1727]">
                 Y
-              </span>
-            </div>
+              </span> */}
+            {/* </div> */}
 
             <div>
               <p className="font-serif text-[18px] font-semibold leading-none text-[#7d1727]">
-                Yarn Tree
+                Yarntree
               </p>
 
               <p className="mt-1 text-[7px] font-bold uppercase tracking-[0.25em] text-[#465337]">
                 Exhibition & Sale
+              </p>
+              <p className="mt-1 text-[7px] font-bold uppercase tracking-[0.25em] text-[#465337]">
+                9th Edition
               </p>
             </div>
           </a>

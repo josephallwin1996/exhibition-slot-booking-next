@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 
 export default function PaymentSuccessPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
 
   const [booking, setBooking] =
     useState(null);
@@ -19,11 +20,71 @@ export default function PaymentSuccessPage() {
     useState("");
 
   useEffect(() => {
-    loadBooking();
+    verifyPayment();
   }, []);
 
-  async function loadBooking() {
+  async function verifyPayment() {
     try {
+      setLoading(true);
+      setError("");
+
+      const bookingReference =
+        searchParams.get("bookingReference");
+
+      const cashfreeOrderId =
+        searchParams.get("cashfreeOrderId");
+
+      if (!bookingReference) {
+        throw new Error(
+          "Booking reference is missing."
+        );
+      }
+
+      if (!cashfreeOrderId) {
+        throw new Error(
+          "Cashfree order ID is missing."
+        );
+      }
+
+      /*
+       * Verify the payment on the server.
+       *
+       * The server will contact Cashfree and confirm
+       * that the order is actually PAID.
+       */
+      const verifyResponse =
+        await fetch(
+          "/api/payment/verify-cashfree",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              bookingReference,
+              cashfreeOrderId,
+            }),
+          }
+        );
+
+      const verifyData =
+        await verifyResponse.json();
+
+      if (!verifyResponse.ok) {
+        throw new Error(
+          verifyData.message ||
+            "Payment verification failed."
+        );
+      }
+
+      /*
+       * Payment is verified successfully.
+       *
+       * Now load the confirmed booking.
+       */
       const response =
         await fetch(
           `/api/booking/${params.token}/payment`,
@@ -44,8 +105,15 @@ export default function PaymentSuccessPage() {
 
       setBooking(data.booking);
     } catch (error) {
-      console.error(error);
-      setError(error.message);
+      console.error(
+        "Payment verification error:",
+        error
+      );
+
+      setError(
+        error.message ||
+          "Payment verification failed."
+      );
     } finally {
       setLoading(false);
     }
@@ -128,7 +196,42 @@ export default function PaymentSuccessPage() {
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-slate-950" />
 
           <p className="mt-4 text-sm text-slate-500">
-            Loading confirmation...
+            Verifying your payment...
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  /*
+   * Do not show the success UI if Cashfree
+   * payment verification failed.
+   */
+  if (error || !booking) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4 py-10">
+        <div className="w-full max-w-lg rounded-3xl bg-white p-8 text-center shadow-sm ring-1 ring-slate-200 sm:p-10">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-3xl font-bold text-red-600">
+            !
+          </div>
+
+          <p className="mt-6 text-xs font-bold uppercase tracking-[0.2em] text-red-600">
+            Payment Verification Failed
+          </p>
+
+          <h1 className="mt-2 text-3xl font-bold text-slate-900">
+            We could not confirm your payment
+          </h1>
+
+          <p className="mt-4 text-sm leading-6 text-slate-500">
+            {error ||
+              "Your payment could not be confirmed at this time."}
+          </p>
+
+          <p className="mt-5 text-xs leading-5 text-slate-400">
+            Please do not make another payment immediately.
+            If money was deducted from your account, it may
+            take some time for the payment status to update.
           </p>
         </div>
       </main>

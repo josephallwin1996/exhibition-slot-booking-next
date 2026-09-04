@@ -323,7 +323,7 @@ export default function AdminDashboard() {
                       key={application._id}
                       application={application}
                       category={getCategoryName(
-                        application.category
+                        application.categoryId
                       )}
                     />
                   )
@@ -410,7 +410,7 @@ export default function AdminDashboard() {
                           <td className="px-6 py-5">
                             <span className="font-medium text-slate-700">
                               {getCategoryName(
-                                application.category
+                                application.categoryId
                               )}
                             </span>
                           </td>

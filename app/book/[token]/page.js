@@ -88,6 +88,16 @@ export default function BookingPage() {
         );
 
         /*
+         * Determine whether this is a Shared Stall.
+         *
+         * Shared Stall does not have add-ons.
+         */
+
+        const isSharedStall =
+          bookingData.application?.categoryId?.slug ===
+          "shared-stall";
+
+        /*
          * Paid users must never load
          * the booking selection UI.
          */
@@ -129,7 +139,20 @@ export default function BookingPage() {
         );
 
         /*
-         * Load add-ons.
+         * Shared Stall does not use add-ons.
+         *
+         * Do not even request the add-ons API.
+         */
+
+        if (isSharedStall) {
+          setAddOns([]);
+          setAddOnSelections({});
+          setAddOnsLoading(false);
+          return;
+        }
+
+        /*
+         * Load add-ons for normal categories.
          */
 
         setAddOnsLoading(true);
@@ -175,6 +198,16 @@ export default function BookingPage() {
 
     loadBooking();
   }, [params.token]);
+
+  /*
+   * ============================================================
+   * CATEGORY
+   * ============================================================
+   */
+
+  const isSharedStall =
+    application?.categoryId?.slug ===
+    "shared-stall";
 
   /*
    * ============================================================
@@ -244,7 +277,17 @@ export default function BookingPage() {
         );
       }
 
-      setStep(2);
+      /*
+       * Shared Stall skips Extras
+       * and goes directly to Review.
+       *
+       * Normal categories continue
+       * to the Extras step.
+       */
+
+      setStep(
+        isSharedStall ? 3 : 2
+      );
     } catch (error) {
       console.error(error);
 
@@ -306,7 +349,17 @@ export default function BookingPage() {
     }
 
     if (step === 3) {
-      setStep(2);
+      /*
+       * Shared Stall:
+       * Review -> Stall
+       *
+       * Normal:
+       * Review -> Extras
+       */
+
+      setStep(
+        isSharedStall ? 1 : 2
+      );
     }
   }
 
@@ -324,21 +377,28 @@ export default function BookingPage() {
     try {
       setBookingError("");
 
+      /*
+       * Shared Stall can never have
+       * add-ons.
+       */
+
       const addOnsPayload =
-        Object.entries(
-          addOnSelections
-        )
-          .filter(
-            ([, quantity]) =>
-              Number(quantity) > 0
-          )
-          .map(
-            ([addOnId, quantity]) => ({
-              addOnId,
-              quantity:
-                Number(quantity),
-            })
-          );
+        isSharedStall
+          ? []
+          : Object.entries(
+              addOnSelections
+            )
+              .filter(
+                ([, quantity]) =>
+                  Number(quantity) > 0
+              )
+              .map(
+                ([addOnId, quantity]) => ({
+                  addOnId,
+                  quantity:
+                    Number(quantity),
+                })
+              );
 
       const response = await fetch(
         `/api/booking/${params.token}/confirm`,
@@ -423,24 +483,25 @@ export default function BookingPage() {
    * ============================================================
    */
 
-  const addOnTotal =
-    addOns.reduce(
-      (total, addOn) => {
-        const quantity =
-          Number(
-            addOnSelections[
-              addOn._id
-            ] || 0
-          );
+  const addOnTotal = isSharedStall
+    ? 0
+    : addOns.reduce(
+        (total, addOn) => {
+          const quantity =
+            Number(
+              addOnSelections[
+                addOn._id
+              ] || 0
+            );
 
-        return (
-          total +
-          Number(addOn.price || 0) *
-            quantity
-        );
-      },
-      0
-    );
+          return (
+            total +
+            Number(addOn.price || 0) *
+              quantity
+          );
+        },
+        0
+      );
 
   const slotPrice = selectedSlot
     ? Number(selectedSlot.price || 0)
@@ -526,8 +587,6 @@ export default function BookingPage() {
    * ============================================================
    * PAID BOOKING
    * ============================================================
-   *
-   * Paid customers get a completely read-only page.
    */
 
   if (
@@ -805,7 +864,13 @@ export default function BookingPage() {
           {/* Progress */}
 
           <div className="mx-auto mt-7 max-w-3xl">
-            <div className="grid grid-cols-3 gap-2">
+            <div
+              className={
+                isSharedStall
+                  ? "grid grid-cols-2 gap-2"
+                  : "grid grid-cols-3 gap-2"
+              }
+            >
               <ProgressStep
                 number="1"
                 label="Stall"
@@ -813,15 +878,21 @@ export default function BookingPage() {
                 completed={step > 1}
               />
 
-              <ProgressStep
-                number="2"
-                label="Extras"
-                active={step === 2}
-                completed={step > 2}
-              />
+              {!isSharedStall && (
+                <ProgressStep
+                  number="2"
+                  label="Extras"
+                  active={step === 2}
+                  completed={step > 2}
+                />
+              )}
 
               <ProgressStep
-                number="3"
+                number={
+                  isSharedStall
+                    ? "2"
+                    : "3"
+                }
                 label="Review"
                 active={step === 3}
                 completed={false}
@@ -836,7 +907,7 @@ export default function BookingPage() {
       ======================================================= */}
 
       <section className="px-3 py-5 sm:px-6 sm:py-8">
-        <div className="mx-auto max-w-5xl">
+        <div className="mx-auto max-w-7xl">
           {/* ==================================================
               EXHIBITOR CARD
           =================================================== */}
@@ -920,23 +991,19 @@ export default function BookingPage() {
                 ) : (
                   <ExhibitionLayout
                     slots={slots}
-                    selectedSlot={
-                      selectedSlot
-                    }
+                    selectedSlot={selectedSlot}
                     categoryId={
                       application?.categoryId?._id
                     }
                     categoryName={
-                      categoryName
+                      application?.categoryId?.name
+                    }
+                    allowedSlotIds={
+                      application?.allowedSlotIds || []
                     }
                     onSelect={(slot) => {
-                      setSelectedSlot(
-                        slot
-                      );
-
-                      setReservationError(
-                        ""
-                      );
+                      setSelectedSlot(slot);
+                      setReservationError("");
                     }}
                   />
                 )}
@@ -986,147 +1053,149 @@ export default function BookingPage() {
           )}
 
           {/* ==================================================
-              STEP 2
+              STEP 2 - EXTRAS
+              Only for normal categories.
           =================================================== */}
 
-          {step === 2 && (
-            <section className="overflow-hidden rounded-[28px] border border-[#7d1727]/10 bg-[#fffaf3] shadow-sm">
-              <div className="border-b border-[#7d1727]/10 px-4 py-5 sm:px-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#7d1727]">
-                      Step 2 · Extras
-                    </p>
+          {!isSharedStall &&
+            step === 2 && (
+              <section className="overflow-hidden rounded-[28px] border border-[#7d1727]/10 bg-[#fffaf3] shadow-sm">
+                <div className="border-b border-[#7d1727]/10 px-4 py-5 sm:px-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#7d1727]">
+                        Step 2 · Extras
+                      </p>
 
-                    <h2 className="mt-1 font-serif text-2xl text-[#42151c] sm:text-3xl">
-                      Customize Your Stall
-                    </h2>
+                      <h2 className="mt-1 font-serif text-2xl text-[#42151c] sm:text-3xl">
+                        Customize Your Stall
+                      </h2>
 
-                    <p className="mt-2 text-xs leading-5 text-[#806d64] sm:text-sm">
-                      Add optional products or services
-                      to your booking.
-                    </p>
+                      <p className="mt-2 text-xs leading-5 text-[#806d64] sm:text-sm">
+                        Add optional products or services
+                        to your booking.
+                      </p>
+                    </div>
+
+                    {reservation && (
+                      <div className="shrink-0 rounded-2xl bg-[#465337] px-3 py-2 text-right text-white">
+                        <p className="text-[8px] font-bold uppercase tracking-[0.15em] text-white/60">
+                          Reserved
+                        </p>
+
+                        <p className="font-serif text-lg">
+                          {
+                            reservation.slotNumber
+                          }
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {reservation && (
-                    <div className="shrink-0 rounded-2xl bg-[#465337] px-3 py-2 text-right text-white">
-                      <p className="text-[8px] font-bold uppercase tracking-[0.15em] text-white/60">
-                        Reserved
-                      </p>
+                    <div className="mt-4 rounded-2xl border border-[#465337]/20 bg-[#465337]/5 px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#465337] text-xs text-white">
+                          ✓
+                        </div>
 
-                      <p className="font-serif text-lg">
-                        {
-                          reservation.slotNumber
-                        }
-                      </p>
+                        <p className="text-xs leading-5 text-[#465337]">
+                          Your stall is temporarily
+                          reserved until{" "}
+                          <strong>
+                            {new Date(
+                              reservation.expiresAt
+                            ).toLocaleTimeString(
+                              [],
+                              {
+                                hour: "2-digit",
+                                minute:
+                                  "2-digit",
+                              }
+                            )}
+                          </strong>
+                          .
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>
 
-                {reservation && (
-                  <div className="mt-4 rounded-2xl border border-[#465337]/20 bg-[#465337]/5 px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#465337] text-xs text-white">
-                        ✓
+                <div className="p-4 sm:p-6">
+                  {addOnsLoading ? (
+                    <div className="rounded-2xl border border-[#7d1727]/10 bg-[#f8f1e6] p-12 text-center">
+                      <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[#7d1727]/15 border-t-[#7d1727]" />
+
+                      <p className="mt-4 text-sm text-[#806d64]">
+                        Loading available extras...
+                      </p>
+                    </div>
+                  ) : addOns.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-[#a77932]/40 bg-[#f8f1e6] p-8 text-center">
+                      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#efe5d6] text-[#7d1727]">
+                        —
                       </div>
 
-                      <p className="text-xs leading-5 text-[#465337]">
-                        Your stall is temporarily
-                        reserved until{" "}
-                        <strong>
-                          {new Date(
-                            reservation.expiresAt
-                          ).toLocaleTimeString(
-                            [],
-                            {
-                              hour: "2-digit",
-                              minute:
-                                "2-digit",
-                            }
+                      <h3 className="mt-4 font-serif text-xl text-[#42151c]">
+                        No extras available
+                      </h3>
+
+                      <p className="mt-1 text-xs leading-5 text-[#806d64]">
+                        You can continue with your
+                        stall booking.
+                      </p>
+                    </div>
+                  ) : (
+                    <AddOnSelector
+                      addOns={addOns}
+                      selections={
+                        addOnSelections
+                      }
+                      onChange={
+                        handleAddOnChange
+                      }
+                    />
+                  )}
+
+                  {/* Current total */}
+
+                  <div className="mt-5 rounded-[24px] bg-[#7d1727] p-5 text-white">
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/60">
+                          Current Total
+                        </p>
+
+                        <p className="mt-1 font-serif text-3xl text-[#f2dfae]">
+                          {formatCurrency(
+                            grandTotal
                           )}
-                        </strong>
-                        .
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
+                        </p>
+                      </div>
 
-              <div className="p-4 sm:p-6">
-                {addOnsLoading ? (
-                  <div className="rounded-2xl border border-[#7d1727]/10 bg-[#f8f1e6] p-12 text-center">
-                    <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-[#7d1727]/15 border-t-[#7d1727]" />
+                      <div className="text-right text-xs leading-6 text-white/65">
+                        <p>
+                          Stall{" "}
+                          {formatCurrency(
+                            slotPrice
+                          )}
+                        </p>
 
-                    <p className="mt-4 text-sm text-[#806d64]">
-                      Loading available extras...
-                    </p>
-                  </div>
-                ) : addOns.length === 0 ? (
-                  <div className="rounded-2xl border border-dashed border-[#a77932]/40 bg-[#f8f1e6] p-8 text-center">
-                    <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#efe5d6] text-[#7d1727]">
-                      —
-                    </div>
-
-                    <h3 className="mt-4 font-serif text-xl text-[#42151c]">
-                      No extras available
-                    </h3>
-
-                    <p className="mt-1 text-xs leading-5 text-[#806d64]">
-                      You can continue with your
-                      stall booking.
-                    </p>
-                  </div>
-                ) : (
-                  <AddOnSelector
-                    addOns={addOns}
-                    selections={
-                      addOnSelections
-                    }
-                    onChange={
-                      handleAddOnChange
-                    }
-                  />
-                )}
-
-                {/* Current total */}
-
-                <div className="mt-5 rounded-[24px] bg-[#7d1727] p-5 text-white">
-                  <div className="flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/60">
-                        Current Total
-                      </p>
-
-                      <p className="mt-1 font-serif text-3xl text-[#f2dfae]">
-                        {formatCurrency(
-                          grandTotal
-                        )}
-                      </p>
-                    </div>
-
-                    <div className="text-right text-xs leading-6 text-white/65">
-                      <p>
-                        Stall{" "}
-                        {formatCurrency(
-                          slotPrice
-                        )}
-                      </p>
-
-                      <p>
-                        Extras{" "}
-                        {formatCurrency(
-                          addOnTotal
-                        )}
-                      </p>
+                        <p>
+                          Extras{" "}
+                          {formatCurrency(
+                            addOnTotal
+                          )}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            </section>
-          )}
+              </section>
+            )}
 
           {/* ==================================================
-              STEP 3
+              STEP 3 - REVIEW
           =================================================== */}
 
           {step === 3 && (
@@ -1136,7 +1205,9 @@ export default function BookingPage() {
               <div className="overflow-hidden rounded-[28px] border border-[#7d1727]/10 bg-[#fffaf3] shadow-sm">
                 <div className="border-b border-[#7d1727]/10 px-4 py-5 sm:px-6">
                   <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#7d1727]">
-                    Step 3 · Review
+                    {isSharedStall
+                      ? "Step 2 · Review"
+                      : "Step 3 · Review"}
                   </p>
 
                   <h2 className="mt-1 font-serif text-2xl text-[#42151c] sm:text-3xl">
@@ -1181,85 +1252,87 @@ export default function BookingPage() {
 
                   {/* Add-ons */}
 
-                  <div className="mt-3 rounded-2xl border border-[#7d1727]/10 bg-[#f8f1e6] p-4 sm:p-5">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#806d64]">
-                        Add-ons
-                      </p>
+                  {!isSharedStall && (
+                    <div className="mt-3 rounded-2xl border border-[#7d1727]/10 bg-[#f8f1e6] p-4 sm:p-5">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#806d64]">
+                          Add-ons
+                        </p>
 
-                      <p className="text-xs font-bold text-[#7d1727]">
-                        {formatCurrency(
-                          addOnTotal
-                        )}
-                      </p>
-                    </div>
+                        <p className="text-xs font-bold text-[#7d1727]">
+                          {formatCurrency(
+                            addOnTotal
+                          )}
+                        </p>
+                      </div>
 
-                    {addOns.filter(
-                      (addOn) =>
-                        Number(
-                          addOnSelections[
-                            addOn._id
-                          ] || 0
-                        ) > 0
-                    ).length === 0 ? (
-                      <p className="mt-3 text-sm text-[#806d64]">
-                        No add-ons selected.
-                      </p>
-                    ) : (
-                      <div className="mt-3 divide-y divide-[#7d1727]/10">
-                        {addOns
-                          .filter(
-                            (addOn) =>
-                              Number(
-                                addOnSelections[
-                                  addOn._id
-                                ] || 0
-                              ) > 0
-                          )
-                          .map(
-                            (addOn) => {
-                              const quantity =
+                      {addOns.filter(
+                        (addOn) =>
+                          Number(
+                            addOnSelections[
+                              addOn._id
+                            ] || 0
+                          ) > 0
+                      ).length === 0 ? (
+                        <p className="mt-3 text-sm text-[#806d64]">
+                          No add-ons selected.
+                        </p>
+                      ) : (
+                        <div className="mt-3 divide-y divide-[#7d1727]/10">
+                          {addOns
+                            .filter(
+                              (addOn) =>
                                 Number(
                                   addOnSelections[
                                     addOn._id
-                                  ]
-                                );
+                                  ] || 0
+                                ) > 0
+                            )
+                            .map(
+                              (addOn) => {
+                                const quantity =
+                                  Number(
+                                    addOnSelections[
+                                      addOn._id
+                                    ]
+                                  );
 
-                              const total =
-                                Number(
-                                  addOn.price
-                                ) *
-                                quantity;
+                                const total =
+                                  Number(
+                                    addOn.price
+                                  ) *
+                                  quantity;
 
-                              return (
-                                <div
-                                  key={
-                                    addOn._id
-                                  }
-                                  className="flex items-center justify-between gap-4 py-3"
-                                >
-                                  <span className="min-w-0 text-sm text-[#62524b]">
-                                    {
-                                      addOn.name
-                                    }{" "}
-                                    ×{" "}
-                                    {
-                                      quantity
+                                return (
+                                  <div
+                                    key={
+                                      addOn._id
                                     }
-                                  </span>
+                                    className="flex items-center justify-between gap-4 py-3"
+                                  >
+                                    <span className="min-w-0 text-sm text-[#62524b]">
+                                      {
+                                        addOn.name
+                                      }{" "}
+                                      ×{" "}
+                                      {
+                                        quantity
+                                      }
+                                    </span>
 
-                                  <span className="shrink-0 text-sm font-bold text-[#42151c]">
-                                    {formatCurrency(
-                                      total
-                                    )}
-                                  </span>
-                                </div>
-                              );
-                            }
-                          )}
-                      </div>
-                    )}
-                  </div>
+                                    <span className="shrink-0 text-sm font-bold text-[#42151c]">
+                                      {formatCurrency(
+                                        total
+                                      )}
+                                    </span>
+                                  </div>
+                                );
+                              }
+                            )}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Total */}
 
@@ -1276,17 +1349,19 @@ export default function BookingPage() {
                       </span>
                     </div>
 
-                    <div className="mt-3 flex items-center justify-between gap-4">
-                      <span className="text-sm text-white/70">
-                        Add-ons
-                      </span>
+                    {!isSharedStall && (
+                      <div className="mt-3 flex items-center justify-between gap-4">
+                        <span className="text-sm text-white/70">
+                          Add-ons
+                        </span>
 
-                      <span>
-                        {formatCurrency(
-                          addOnTotal
-                        )}
-                      </span>
-                    </div>
+                        <span>
+                          {formatCurrency(
+                            addOnTotal
+                          )}
+                        </span>
+                      </div>
+                    )}
 
                     <div className="mt-4 border-t border-white/15 pt-4">
                       <div className="flex items-center justify-between gap-4">
@@ -1310,7 +1385,7 @@ export default function BookingPage() {
               ================================================== */}
 
               <div className="rounded-[28px] border border-[#7d1727]/10 bg-[#fffaf3] p-4 shadow-sm sm:p-6">
-                <div className="mb-4">
+                {/* <div className="mb-4">
                   <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#7d1727]">
                     Before Payment
                   </p>
@@ -1323,7 +1398,7 @@ export default function BookingPage() {
                     Please read and accept the rules
                     before continuing to payment.
                   </p>
-                </div>
+                </div> */}
 
                 <TermsAndConditions
                   accepted={

@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 
 import connectDB from "@/lib/mongodb";
 import Application from "@/models/Application";
+import Category from "@/models/Category";
+import Slot from "@/models/Slot";
 
 import { verifyAdminToken } from "@/lib/auth";
 
@@ -15,12 +17,6 @@ import {
   sendWhatsAppTemplate,
 } from "@/lib/whatsapp";
 
-/*
- * =========================================================
- * ADMIN AUTHENTICATION
- * =========================================================
- */
-
 async function authenticateAdmin() {
   const cookieStore = await cookies();
 
@@ -31,54 +27,13 @@ async function authenticateAdmin() {
     return null;
   }
 
-  const admin =
-    verifyAdminToken(token);
+  const admin = verifyAdminToken(token);
 
   if (!admin || admin.role !== "admin") {
     return null;
   }
 
   return admin;
-}
-
-/*
- * =========================================================
- * NORMALIZE WHATSAPP NUMBER
- * =========================================================
- *
- * Examples:
- *
- * +91 9645395716
- *       ↓
- * 919645395716
- *
- * 9645395716
- *       ↓
- * 919645395716
- */
-
-function normalizeWhatsAppNumber(
-  mobile
-) {
-  if (!mobile) {
-    return null;
-  }
-
-  let number =
-    String(mobile).trim();
-
-  // Remove +, spaces, -, brackets, etc.
-  number = number.replace(
-    /[^\d]/g,
-    ""
-  );
-
-  // Assume India for a 10 digit number.
-  if (number.length === 10) {
-    number = `91${number}`;
-  }
-
-  return number;
 }
 
 /*
@@ -107,8 +62,7 @@ export async function GET(
       );
     }
 
-    const { id } =
-      await params;
+    const { id } = await params;
 
     await connectDB();
 
@@ -116,7 +70,11 @@ export async function GET(
       await Application.findById(id)
         .populate(
           "categoryId",
-          "name"
+          "name slug"
+        )
+        .populate(
+          "allowedSlotIds",
+          "slotNumber price status category position row column"
         )
         .lean();
 
@@ -158,8 +116,7 @@ export async function GET(
 
 /*
  * =========================================================
- * UPDATE APPLICATION
- * APPROVE / REJECT
+ * PATCH APPLICATION
  * =========================================================
  */
 
@@ -168,12 +125,6 @@ export async function PATCH(
   { params }
 ) {
   try {
-    /*
-     * -----------------------------------------------------
-     * Authenticate admin
-     * -----------------------------------------------------
-     */
-
     const admin =
       await authenticateAdmin();
 
@@ -189,14 +140,7 @@ export async function PATCH(
       );
     }
 
-    /*
-     * -----------------------------------------------------
-     * Request data
-     * -----------------------------------------------------
-     */
-
-    const { id } =
-      await params;
+    const { id } = await params;
 
     const body =
       await request.json();
@@ -204,13 +148,8 @@ export async function PATCH(
     const {
       action,
       rejectionReason,
+      selectedSlotIds,
     } = body;
-
-    /*
-     * -----------------------------------------------------
-     * Validate action
-     * -----------------------------------------------------
-     */
 
     if (
       !["approve", "reject"].includes(
@@ -220,20 +159,13 @@ export async function PATCH(
       return Response.json(
         {
           success: false,
-          message:
-            "Invalid action.",
+          message: "Invalid action.",
         },
         {
           status: 400,
         }
       );
     }
-
-    /*
-     * -----------------------------------------------------
-     * Database
-     * -----------------------------------------------------
-     */
 
     await connectDB();
 
@@ -254,11 +186,9 @@ export async function PATCH(
     }
 
     /*
-     * -----------------------------------------------------
-     * Prevent duplicate approval/rejection
-     * -----------------------------------------------------
+     * Only pending applications can be
+     * approved or rejected.
      */
-
     if (
       application.status !== "pending"
     ) {
@@ -281,24 +211,220 @@ export async function PATCH(
 
     if (action === "approve") {
       /*
-       * ---------------------------------------------------
+       * -----------------------------------------------
+       * Validate selected slots
+       * -----------------------------------------------
+       */
+
+      if (
+        !Array.isArray(
+          selectedSlotIds
+        ) ||
+        selectedSlotIds.length === 0
+      ) {
+        return Response.json(
+          {
+            success: false,
+            message:
+              "Please select at least one stall before approving the application.",
+          },
+          {
+            status: 400,
+          }
+        );
+      }
+
+      /*
+       * Remove empty values and duplicates.
+       */
+
+      const uniqueSlotIds = [
+        ...new Set(
+          selectedSlotIds
+            .map((slotId) =>
+              String(slotId).trim()
+            )
+            .filter(Boolean)
+        ),
+      ];
+
+      if (
+        uniqueSlotIds.length === 0
+      ) {
+        return Response.json(
+          {
+            success: false,
+            message:
+              "Please select at least one valid stall.",
+          },
+          {
+            status: 400,
+          }
+        );
+      }
+
+      /*
+       * -----------------------------------------------
+       * Validate MongoDB ObjectIds
+       * -----------------------------------------------
+       */
+
+      const invalidObjectId =
+        uniqueSlotIds.find(
+          (slotId) =>
+            !/^[a-fA-F0-9]{24}$/.test(
+              slotId
+            )
+        );
+
+      if (invalidObjectId) {
+        return Response.json(
+          {
+            success: false,
+            message:
+              "One or more selected stalls have an invalid ID.",
+          },
+          {
+            status: 400,
+          }
+        );
+      }
+
+      /*
+       * -----------------------------------------------
+       * Load selected slots
+       * -----------------------------------------------
+       */
+
+      const slots =
+        await Slot.find({
+          _id: {
+            $in: uniqueSlotIds,
+          },
+        });
+
+      /*
+       * Every selected slot must exist.
+       */
+
+      if (
+        slots.length !==
+        uniqueSlotIds.length
+      ) {
+        return Response.json(
+          {
+            success: false,
+            message:
+              "One or more selected stalls could not be found.",
+          },
+          {
+            status: 400,
+          }
+        );
+      }
+
+      /*
+       * -----------------------------------------------
+       * Category validation
+       * -----------------------------------------------
+       *
+       * Only slots belonging to the
+       * application's category can be assigned.
+       */
+
+      if (!application.categoryId) {
+        return Response.json(
+          {
+            success: false,
+            message:
+              "This application does not have a valid category assigned.",
+          },
+          {
+            status: 400,
+          }
+        );
+      }
+
+      const invalidCategorySlot =
+        slots.find(
+          (slot) =>
+            String(slot.category) !==
+            String(
+              application.categoryId
+            )
+        );
+
+      if (
+        invalidCategorySlot
+      ) {
+        return Response.json(
+          {
+            success: false,
+            message:
+              "One or more selected stalls do not belong to this application's category.",
+          },
+          {
+            status: 400,
+          }
+        );
+      }
+
+      /*
+       * -----------------------------------------------
+       * Availability validation
+       * -----------------------------------------------
+       *
+       * A slot must still be available at the
+       * exact moment of approval.
+       */
+
+      const unavailableSlot =
+        slots.find(
+          (slot) =>
+            slot.status !==
+            "available"
+        );
+
+      if (
+        unavailableSlot
+      ) {
+        return Response.json(
+          {
+            success: false,
+            message:
+              `Stall ${unavailableSlot.slotNumber} is no longer available. Please refresh and select the available stalls again.`,
+          },
+          {
+            status: 409,
+          }
+        );
+      }
+
+      /*
+       * -----------------------------------------------
        * Generate booking token
-       * ---------------------------------------------------
+       * -----------------------------------------------
        */
 
       const bookingToken =
-        crypto.randomBytes(32).toString(
-          "hex"
-        );
-
-      /*
-       * ---------------------------------------------------
-       * Update application
-       * ---------------------------------------------------
-       */
+        crypto
+          .randomBytes(32)
+          .toString("hex");
 
       application.status =
         "approved";
+
+      /*
+       * IMPORTANT:
+       *
+       * These slots are only the slots the applicant
+       * is ALLOWED to choose from.
+       *
+       * They are NOT booked yet.
+       */
+
+      application.allowedSlotIds =
+        uniqueSlotIds;
 
       application.bookingToken =
         bookingToken;
@@ -315,24 +441,56 @@ export async function PATCH(
       await application.save();
 
       /*
-       * ---------------------------------------------------
-       * Booking URL
-       * ---------------------------------------------------
-       *
-       * This is the same URL you were already using.
+       * -----------------------------------------------
+       * Booking link
+       * -----------------------------------------------
        */
 
       const appUrl =
         process.env
           .NEXT_PUBLIC_APP_URL;
 
+      if (!appUrl) {
+        console.error(
+          "NEXT_PUBLIC_APP_URL is not configured."
+        );
+      }
+
       const bookingLink =
-        `${appUrl}/booking/${bookingToken}`;
+        appUrl
+          ? `${appUrl}/book/${bookingToken}`
+          : null;
 
       /*
-       * ===================================================
-       * EMAIL — APPROVAL
-       * ===================================================
+       * -----------------------------------------------
+       * Get category name
+       * -----------------------------------------------
+       */
+
+      let categoryName =
+        application.categoryName ||
+        "";
+
+      if (
+        application.categoryId
+      ) {
+        const category =
+          await Category.findById(
+            application.categoryId
+          )
+            .select("name")
+            .lean();
+
+        if (category) {
+          categoryName =
+            category.name;
+        }
+      }
+
+      /*
+       * -----------------------------------------------
+       * Approval Email
+       * -----------------------------------------------
        */
 
       try {
@@ -352,11 +510,6 @@ export async function PATCH(
           }
         );
       } catch (emailError) {
-        /*
-         * Email failure should NOT
-         * make approval fail.
-         */
-
         console.error(
           "Approval email error:",
           emailError
@@ -364,149 +517,95 @@ export async function PATCH(
       }
 
       /*
-       * ===================================================
-       * WHATSAPP — APPLICATION APPROVED
-       * ===================================================
+       * -----------------------------------------------
+       * Approval WhatsApp
+       * -----------------------------------------------
        *
-       * Template:
+       * This uses the current template-based
+       * WhatsApp integration.
        *
-       * application_approved
+       * IMPORTANT:
+       * Do not send the URL inside the button
+       * as the complete URL.
        *
-       * Body variables:
-       *
-       * {{1}} = Contact person
-       * {{2}} = Business name
-       * {{3}} = Application reference
-       *
-       * Button:
-       *
-       * URL button
-       * bookingToken is supplied as the
-       * dynamic URL parameter.
-       * ===================================================
+       * Meta appends the bookingToken to the
+       * dynamic URL configured in the template.
        */
 
-      const applicantWhatsApp =
-        normalizeWhatsAppNumber(
+      try {
+        if (
+          bookingLink &&
           application.mobile
-        );
+        ) {
+          await sendWhatsAppTemplate({
+            to:
+              application.mobile,
 
-      if (applicantWhatsApp) {
-        try {
-          await sendWhatsAppTemplate(
-            {
-              to:
-                applicantWhatsApp,
+            templateName:
+              "application_approved",
 
-              templateName:
-                "application_approved",
+            languageCode:
+              "en",
 
-              languageCode:
-                "en",
+            components: [
+              {
+                type: "body",
 
-              components: [
-                /*
-                 * -----------------------------------------
-                 * BODY VARIABLES
-                 * -----------------------------------------
-                 */
+                parameters: [
+                  {
+                    type: "text",
+                    text:
+                      application.contactPerson,
+                  },
 
-                {
-                  type: "body",
+                  {
+                    type: "text",
+                    text:
+                      application.businessName,
+                  },
 
-                  parameters: [
-                    {
-                      type: "text",
+                  {
+                    type: "text",
+                    text:
+                      String(
+                        application._id
+                      ),
+                  },
+                ],
+              },
 
-                      text:
-                        application.contactPerson,
-                    },
+              {
+                type: "button",
 
-                    {
-                      type: "text",
+                sub_type: "url",
 
-                      text:
-                        application.businessName,
-                    },
+                index: "0",
 
-                    {
-                      type: "text",
+                parameters: [
+                  {
+                    type: "text",
 
-                      text:
-                        String(
-                          application._id
-                        ),
-                    },
-                  ],
-                },
-
-                /*
-                 * -----------------------------------------
-                 * BOOKING URL BUTTON
-                 * -----------------------------------------
-                 *
-                 * Meta will append this value to the
-                 * dynamic URL configured in the template.
-                 *
-                 * Example template URL:
-                 *
-                 * https://example.com/booking/{{1}}
-                 *
-                 * Result:
-                 *
-                 * https://example.com/booking/abc123...
-                 */
-
-                {
-                  type: "button",
-
-                  sub_type: "url",
-
-                  index: "0",
-
-                  parameters: [
-                    {
-                      type: "text",
-
-                      text:
-                        application.bookingToken,
-                    },
-                  ],
-                },
-              ],
-            }
-          );
-
-          console.log(
-            "Application approved WhatsApp sent:",
-            applicantWhatsApp
-          );
-        } catch (whatsappError) {
-          /*
-           * IMPORTANT:
-           *
-           * WhatsApp failure must NEVER
-           * undo the approval.
-           *
-           * The application is already approved
-           * and saved above.
-           */
-
-          console.error(
-            "Approval WhatsApp error:",
-            whatsappError
-          );
+                    text:
+                      application.bookingToken,
+                  },
+                ],
+              },
+            ],
+          });
         }
-      } else {
-        console.warn(
-          "Approval WhatsApp skipped: invalid applicant mobile number."
+      } catch (
+        whatsappError
+      ) {
+        console.error(
+          "Approval WhatsApp error:",
+          whatsappError
         );
       }
 
       /*
-       * ---------------------------------------------------
+       * -----------------------------------------------
        * Response
-       * ---------------------------------------------------
+       * -----------------------------------------------
        */
 
       return Response.json({
@@ -524,6 +623,9 @@ export async function PATCH(
 
           bookingToken:
             application.bookingToken,
+
+          allowedSlotIds:
+            application.allowedSlotIds,
         },
       });
     }
@@ -535,12 +637,6 @@ export async function PATCH(
      */
 
     if (action === "reject") {
-      /*
-       * ---------------------------------------------------
-       * Validate rejection reason
-       * ---------------------------------------------------
-       */
-
       if (
         !rejectionReason?.trim()
       ) {
@@ -555,12 +651,6 @@ export async function PATCH(
           }
         );
       }
-
-      /*
-       * ---------------------------------------------------
-       * Update application
-       * ---------------------------------------------------
-       */
 
       application.status =
         "rejected";
@@ -577,12 +667,20 @@ export async function PATCH(
       application.bookingToken =
         null;
 
+      /*
+       * Clear any previously assigned
+       * slots as a safety measure.
+       */
+
+      application.allowedSlotIds =
+        [];
+
       await application.save();
 
       /*
-       * ===================================================
-       * EMAIL — REJECTION
-       * ===================================================
+       * -----------------------------------------------
+       * Rejection Email
+       * -----------------------------------------------
        */
 
       try {
@@ -602,25 +700,11 @@ export async function PATCH(
           }
         );
       } catch (emailError) {
-        /*
-         * Email failure should NOT
-         * make rejection fail.
-         */
-
         console.error(
           "Rejection email error:",
           emailError
         );
       }
-
-      /*
-       * ---------------------------------------------------
-       * Response
-       * ---------------------------------------------------
-       *
-       * No WhatsApp template was requested
-       * for rejection, so we leave that unchanged.
-       */
 
       return Response.json({
         success: true,
@@ -637,6 +721,9 @@ export async function PATCH(
 
           rejectionReason:
             application.rejectionReason,
+
+          allowedSlotIds:
+            application.allowedSlotIds,
         },
       });
     }

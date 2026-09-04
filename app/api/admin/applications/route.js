@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import connectDB from "@/lib/mongodb";
 import Application from "@/models/Application";
+import Category from "@/models/Category";
 import { verifyAdminToken } from "@/lib/auth";
 
 export async function GET(request) {
@@ -59,6 +60,7 @@ export async function GET(request) {
     }
 
     const applications = await Application.find(query)
+      .populate("categoryId", "name slug")
       .sort({ createdAt: -1 })
       .lean();
 

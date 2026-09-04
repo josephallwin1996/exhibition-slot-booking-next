@@ -8,6 +8,7 @@ export default function ExhibitionLayout({
   onSelect,
   categoryId,
   categoryName,
+  allowedSlotIds = [],
 }) {
   const sortedSlots = [...slots].sort((a, b) => {
     if (Number(a.row || 0) !== Number(b.row || 0)) {
@@ -68,21 +69,64 @@ export default function ExhibitionLayout({
     if (!categoryId) {
       return false;
     }
-    
+
     const slotCategoryId =
       slot.categoryId ||
       slot.category?._id ||
       slot.category;
-    console.log(slotCategoryId, categoryId)
+
+    console.log(
+      slotCategoryId,
+      categoryId
+    );
+
     return (
       String(slotCategoryId) ===
       String(categoryId)
     );
   }
 
+  /*
+   * Determine whether this specific slot
+   * was assigned to this application by admin.
+   */
+  function isAllowedSlot(slot) {
+    if (!slot?._id) {
+      return false;
+    }
+
+    return allowedSlotIds.some(
+      (allowedSlotId) => {
+        const id =
+          typeof allowedSlotId ===
+          "object"
+            ? allowedSlotId?._id
+            : allowedSlotId;
+
+        return (
+          String(id) ===
+          String(slot._id)
+        );
+      }
+    );
+  }
+
+  /*
+   * A slot can be selected only when:
+   *
+   * 1. It is specifically assigned to
+   *    this application by admin.
+   *
+   * 2. Its current status is available.
+   *
+   * Category is intentionally NOT used here.
+   *
+   * The admin-selected slots are the source
+   * of truth for what the applicant can book.
+   */
   function canSelect(slot) {
     return (
-      isMyCategory(slot) &&
+      isAllowedSlot(slot) &&
       slot.status === "available"
     );
   }
@@ -245,7 +289,7 @@ export default function ExhibitionLayout({
                                 selectable={canSelect(
                                   slot
                                 )}
-                                belongsToCategory={isMyCategory(
+                                belongsToCategory={isAllowedSlot(
                                   slot
                                 )}
                                 onSelect={
@@ -338,7 +382,7 @@ export default function ExhibitionLayout({
           />
 
           <Legend
-            className="bg-blue-50 border-blue-200"
+            className="bg-red-400 border-red-500"
             label="Booked"
           />
 

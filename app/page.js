@@ -64,6 +64,7 @@ export default function HomePage() {
                   alt="Exhibition Logo"
                   width={75}
                   height={75}
+                  loading="eager"
                   //className="relative h-8 w-8 object-contain"
                 />
                 
@@ -218,6 +219,14 @@ export default function HomePage() {
 
               {/* Central poster content */}
               <div className="absolute inset-x-5 top-[17%] text-center sm:inset-x-8">
+                <Image
+                  src="/logo.png"
+                  alt="Exhibition Logo"
+                  width={75}
+                  height={75}
+                  loading="eager"
+                  className="mx-auto object-contain"
+                />
                 <p className="font-serif text-[13px] font-semibold uppercase tracking-[0.18em] text-[#7d1727] sm:text-sm">
                   Yarntree
                 </p>

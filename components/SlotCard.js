@@ -32,7 +32,8 @@ export default function SlotCard({
       "border-green-300 bg-green-50 text-green-800 hover:-translate-y-0.5 hover:border-green-500 hover:shadow-md";
   } else if (status === "booked") {
     cardClass =
-      "border-blue-200 bg-blue-50 text-blue-500";
+      "border-red-200 bg-red-50 text-red-500";
+      //bg-red-400 border-red-500
   } else if (status === "unavailable") {
     cardClass =
       "border-slate-200 bg-slate-100 text-slate-400";

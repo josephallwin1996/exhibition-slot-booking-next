@@ -1,73 +1,247 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 
-export default function ApplicationDetailsPage() {
-  const params = useParams();
+export default function ApplicationDetailsPage({
+  params,
+}) {
   const router = useRouter();
 
-  const [application, setApplication] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [processing, setProcessing] = useState(false);
-  const [error, setError] = useState("");
+  const [application, setApplication] =
+    useState(null);
 
-  const [showReject, setShowReject] = useState(false);
-  const [rejectionReason, setRejectionReason] = useState("");
+  const [slots, setSlots] = useState([]);
 
-  async function loadApplication() {
-    try {
-      setLoading(true);
+  const [selectedSlotIds, setSelectedSlotIds] =
+    useState([]);
 
-      const response = await fetch(
-        `/api/admin/applications/${params.id}`,
-        {
-          cache: "no-store",
-        }
-      );
+  const [loading, setLoading] =
+    useState(true);
 
-      const data = await response.json();
+  const [loadingSlots, setLoadingSlots] =
+    useState(false);
 
-      if (response.status === 401) {
-        window.location.href = "/admin/login";
-        return;
-      }
+  const [processing, setProcessing] =
+    useState(false);
 
-      if (!response.ok) {
-        throw new Error(
-          data.message || "Unable to load application."
-        );
-      }
+  const [error, setError] =
+    useState("");
 
-      setApplication(data.application);
-    } catch (error) {
-      console.error(error);
-      setError(error.message);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const [success, setSuccess] =
+    useState("");
+
+  const [showReject, setShowReject] =
+    useState(false);
+
+  const [rejectionReason, setRejectionReason] =
+    useState("");
+
+  /*
+   * =====================================================
+   * LOAD APPLICATION
+   * =====================================================
+   */
 
   useEffect(() => {
-    if (params.id) {
-      loadApplication();
-    }
-  }, [params.id]);
+    async function loadApplication() {
+      try {
+        setLoading(true);
+        setError("");
 
-  async function updateApplication(action) {
-    if (
-      action === "reject" &&
-      !rejectionReason.trim()
-    ) {
-      setError("Please provide a rejection reason.");
+        const { id } = await params;
+
+        const response = await fetch(
+          `/api/admin/applications/${id}`,
+          {
+            cache: "no-store",
+          }
+        );
+
+        const data =
+          await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(
+            data.message ||
+              "Unable to load application."
+          );
+        }
+
+        setApplication(
+          data.application
+        );
+
+        /*
+         * If the application already has assigned
+         * slots, initialize the selection.
+         */
+        if (
+          Array.isArray(
+            data.application
+              ?.allowedSlotIds
+          )
+        ) {
+          setSelectedSlotIds(
+            data.application.allowedSlotIds.map(
+              (slot) =>
+                typeof slot === "string"
+                  ? slot
+                  : slot._id
+            )
+          );
+        }
+      } catch (err) {
+        console.error(err);
+
+        setError(
+          err.message ||
+            "Unable to load application."
+        );
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadApplication();
+  }, [params]);
+
+  /*
+   * =====================================================
+   * LOAD AVAILABLE SLOTS
+   * =====================================================
+   */
+
+  useEffect(() => {
+    if (!application?.categoryId?._id) {
       return;
     }
 
-    const confirmed = window.confirm(
-      action === "approve"
-        ? "Are you sure you want to approve this application?"
-        : "Are you sure you want to reject this application?"
+    /*
+     * Only load slots while the application is
+     * pending. Once approved, the saved assigned
+     * slots are displayed from the application.
+     */
+    if (
+      application.status !==
+      "pending"
+    ) {
+      return;
+    }
+
+    async function loadSlots() {
+      try {
+        setLoadingSlots(true);
+
+        const categoryId =
+          application.categoryId._id;
+
+        const response = await fetch(
+          `/api/admin/slots?category=${categoryId}`,
+          {
+            cache: "no-store",
+          }
+        );
+
+        const data =
+          await response.json();
+
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+          throw new Error(
+            data.message ||
+              "Unable to load slots."
+          );
+        }
+
+        setSlots(
+          Array.isArray(data.slots)
+            ? data.slots
+            : []
+        );
+      } catch (err) {
+        console.error(
+          "Load slots error:",
+          err
+        );
+
+        setError(
+          err.message ||
+            "Unable to load available slots."
+        );
+      } finally {
+        setLoadingSlots(false);
+      }
+    }
+
+    loadSlots();
+  }, [
+    application?.categoryId?._id,
+    application?.status,
+  ]);
+
+  /*
+   * =====================================================
+   * TOGGLE SLOT
+   * =====================================================
+   */
+
+  function toggleSlot(slot) {
+    if (
+      !slot ||
+      slot.status !== "available"
+    ) {
+      return;
+    }
+
+    const slotId =
+      String(slot._id);
+
+    setSelectedSlotIds(
+      (current) => {
+        if (
+          current.includes(slotId)
+        ) {
+          return current.filter(
+            (id) => id !== slotId
+          );
+        }
+
+        return [
+          ...current,
+          slotId,
+        ];
+      }
     );
+  }
+
+  /*
+   * =====================================================
+   * APPROVE
+   * =====================================================
+   */
+
+  async function handleApprove() {
+    if (
+      selectedSlotIds.length === 0
+    ) {
+      setError(
+        "Please select at least one stall before approving the application."
+      );
+
+      return;
+    }
+
+    const confirmed =
+      window.confirm(
+        `Approve this application with ${selectedSlotIds.length} selected stall${
+          selectedSlotIds.length === 1
+            ? ""
+            : "s"
+        }?`
+      );
 
     if (!confirmed) {
       return;
@@ -76,335 +250,922 @@ export default function ApplicationDetailsPage() {
     try {
       setProcessing(true);
       setError("");
+      setSuccess("");
 
-      const response = await fetch(
-        `/api/admin/applications/${params.id}`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            action,
-            rejectionReason,
-          }),
-        }
-      );
+      const { id } = await params;
 
-      const data = await response.json();
+      const response =
+        await fetch(
+          `/api/admin/applications/${id}`,
+          {
+            method: "PATCH",
 
-      if (!response.ok) {
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              action: "approve",
+
+              selectedSlotIds,
+            }),
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !data.success
+      ) {
         throw new Error(
-          data.message || "Unable to update application."
+          data.message ||
+            "Unable to approve application."
         );
       }
 
-      setApplication((previous) => ({
-        ...previous,
-        ...data.application,
-      }));
+      setSuccess(
+        "Application approved successfully."
+      );
 
-      setShowReject(false);
-      setRejectionReason("");
-    } catch (error) {
-      console.error(error);
-      setError(error.message);
+      /*
+       * Update the local application state
+       * instead of immediately leaving the page.
+       */
+      setApplication(
+        (current) => ({
+          ...current,
+
+          status: "approved",
+
+          bookingToken:
+            data.application
+              ?.bookingToken,
+
+          allowedSlotIds:
+            data.application
+              ?.allowedSlotIds ||
+            selectedSlotIds,
+        })
+      );
+
+      /*
+       * Hide selection UI after approval.
+       */
+      setSlots([]);
+    } catch (err) {
+      console.error(
+        "Approval error:",
+        err
+      );
+
+      setError(
+        err.message ||
+          "Unable to approve application."
+      );
     } finally {
       setProcessing(false);
     }
   }
 
+  /*
+   * =====================================================
+   * REJECT
+   * =====================================================
+   */
+
+  async function handleReject() {
+    if (
+      !rejectionReason.trim()
+    ) {
+      setError(
+        "Please provide a rejection reason."
+      );
+
+      return;
+    }
+
+    try {
+      setProcessing(true);
+      setError("");
+      setSuccess("");
+
+      const { id } = await params;
+
+      const response =
+        await fetch(
+          `/api/admin/applications/${id}`,
+          {
+            method: "PATCH",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body: JSON.stringify({
+              action: "reject",
+
+              rejectionReason:
+                rejectionReason.trim(),
+            }),
+          }
+        );
+
+      const data =
+        await response.json();
+
+      if (
+        !response.ok ||
+        !data.success
+      ) {
+        throw new Error(
+          data.message ||
+            "Unable to reject application."
+        );
+      }
+
+      setSuccess(
+        "Application rejected successfully."
+      );
+
+      setApplication(
+        (current) => ({
+          ...current,
+
+          status: "rejected",
+
+          rejectionReason:
+            rejectionReason.trim(),
+
+          allowedSlotIds: [],
+        })
+      );
+
+      setShowReject(false);
+    } catch (err) {
+      console.error(
+        "Rejection error:",
+        err
+      );
+
+      setError(
+        err.message ||
+          "Unable to reject application."
+      );
+    } finally {
+      setProcessing(false);
+    }
+  }
+
+  /*
+   * =====================================================
+   * LOADING
+   * =====================================================
+   */
+
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-100">
-        <p className="text-sm text-slate-500">
-          Loading application...
-        </p>
-      </main>
-    );
-  }
+      <div className="min-h-screen bg-[#faf7f2]">
+        <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+          <div className="animate-pulse space-y-6">
+            <div className="h-8 w-64 rounded-lg bg-[#eadfce]" />
 
-  if (error && !application) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-100 px-4">
-        <div className="rounded-2xl bg-white p-8 text-center shadow-sm">
-          <h1 className="text-xl font-bold text-slate-900">
-            Unable to load application
-          </h1>
+            <div className="h-48 rounded-2xl bg-white shadow-sm" />
 
-          <p className="mt-2 text-sm text-red-600">
-            {error}
-          </p>
-
-          <button
-            onClick={() => router.push("/admin/dashboard")}
-            className="mt-6 rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white"
-          >
-            Back to Dashboard
-          </button>
+            <div className="h-64 rounded-2xl bg-white shadow-sm" />
+          </div>
         </div>
-      </main>
+      </div>
     );
   }
 
-  const isPending = application.status === "pending";
+  /*
+   * =====================================================
+   * ERROR
+   * =====================================================
+   */
+
+  if (!application) {
+    return (
+      <div className="min-h-screen bg-[#faf7f2]">
+        <div className="mx-auto max-w-4xl px-4 py-10">
+          <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-700">
+            {error ||
+              "Application not found."}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const categoryName =
+    application.categoryId
+      ?.name ||
+    application.categoryName ||
+    "—";
+
+  const assignedSlots =
+    Array.isArray(
+      application.allowedSlotIds
+    )
+      ? application.allowedSlotIds
+      : [];
 
   return (
-    <main className="min-h-screen bg-slate-100">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-5 sm:px-6">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-600">
-              Exhibition Admin
-            </p>
+    <div className="min-h-screen bg-[#faf7f2]">
+      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+        {/* =================================================
+            HEADER
+        ================================================= */}
 
-            <h1 className="mt-1 text-xl font-bold text-slate-900">
-              Application Details
-            </h1>
-          </div>
-
+        <div className="mb-6">
           <button
+            type="button"
             onClick={() =>
-              router.push("/admin/dashboard")
+              router.back()
             }
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            className="mb-4 inline-flex items-center gap-2 text-sm font-medium text-[#7d1727] transition hover:opacity-70"
           >
-            Back
+            <span>←</span>
+            Back to applications
           </button>
-        </div>
-      </header>
 
-      <section className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
-        {/* Status */}
-        <div className="mb-6 flex flex-col gap-4 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm text-slate-500">
-              Application Status
-            </p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="mb-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#a77932]">
+                Application
+              </p>
 
-            <span
-              className={`mt-2 inline-flex rounded-full px-4 py-1.5 text-sm font-bold capitalize ${
-                application.status === "pending"
-                  ? "bg-amber-100 text-amber-700"
-                  : application.status === "approved"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-700"
-              }`}
-            >
-              {application.status}
-            </span>
-          </div>
+              <h1 className="text-2xl font-semibold tracking-tight text-[#3d3027] sm:text-3xl">
+                {application.businessName}
+              </h1>
 
-          {isPending && (
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <button
-                disabled={processing}
-                onClick={() =>
-                  updateApplication("approve")
-                }
-                className="rounded-xl bg-green-600 px-5 py-3 text-sm font-bold text-white hover:bg-green-700 disabled:opacity-50"
-              >
-                {processing
-                  ? "Processing..."
-                  : "Approve Application"}
-              </button>
-
-              <button
-                disabled={processing}
-                onClick={() => setShowReject(true)}
-                className="rounded-xl bg-red-600 px-5 py-3 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50"
-              >
-                Reject Application
-              </button>
+              <p className="mt-1 text-sm text-[#75675b]">
+                {application.contactPerson ||
+                  "No contact person"}{" "}
+                · {categoryName}
+              </p>
             </div>
-          )}
+
+            <StatusBadge
+              status={
+                application.status
+              }
+            />
+          </div>
         </div>
+
+        {/* =================================================
+            ALERTS
+        ================================================= */}
 
         {error && (
-          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {error}
           </div>
         )}
 
-        {/* Rejection Form */}
-        {showReject && isPending && (
-          <div className="mb-6 rounded-2xl border border-red-200 bg-white p-6 shadow-sm">
-            <h2 className="font-bold text-slate-900">
-              Reject Application
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-500">
-              Please provide a reason. This will be included in
-              the rejection email.
-            </p>
-
-            <textarea
-              value={rejectionReason}
-              onChange={(event) =>
-                setRejectionReason(event.target.value)
-              }
-              rows={4}
-              placeholder="Enter rejection reason..."
-              className="mt-4 w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/10"
-            />
-
-            <div className="mt-4 flex gap-3">
-              <button
-                disabled={processing}
-                onClick={() =>
-                  updateApplication("reject")
-                }
-                className="rounded-xl bg-red-600 px-5 py-3 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-50"
-              >
-                Confirm Rejection
-              </button>
-
-              <button
-                onClick={() => {
-                  setShowReject(false);
-                  setRejectionReason("");
-                }}
-                className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700"
-              >
-                Cancel
-              </button>
-            </div>
+        {success && (
+          <div className="mb-5 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
+            {success}
           </div>
         )}
 
-        {/* Business Information */}
-        <div className="space-y-6">
-          <InfoSection title="Business Information">
-            <InfoItem
-              label="Business Name"
-              value={application.businessName}
-            />
+        {/* =================================================
+            APPLICATION INFORMATION
+        ================================================= */}
 
-            <InfoItem
-              label="Category"
-              value={application.categoryId.name}
-            />
+        <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+          <div className="space-y-5">
+            <section className="rounded-2xl border border-[#eadfce] bg-white p-5 shadow-sm sm:p-6">
+              <div className="mb-5">
+                <h2 className="text-lg font-semibold text-[#3d3027]">
+                  Application details
+                </h2>
 
-            <InfoItem
-              label="Description"
-              value={application.description}
-              full
-            />
-          </InfoSection>
+                <p className="mt-1 text-sm text-[#75675b]">
+                  Information submitted by
+                  the applicant.
+                </p>
+              </div>
 
-          <InfoSection title="Contact Information">
-            <InfoItem
-              label="Contact Person"
-              value={application.contactPerson}
-            />
+              <div className="grid gap-5 sm:grid-cols-2">
+                <InfoItem
+                  label="Business name"
+                  value={
+                    application.businessName
+                  }
+                />
 
-            <InfoItem
-              label="Mobile"
-              value={application.mobile}
-            />
+                <InfoItem
+                  label="Contact person"
+                  value={
+                    application.contactPerson ||
+                    "—"
+                  }
+                />
 
-            <InfoItem
-              label="Email"
-              value={application.email}
-            />
-          </InfoSection>
+                <InfoItem
+                  label="Email"
+                  value={
+                    application.email
+                  }
+                />
 
-          <InfoSection title="Social Media">
-            <InfoItem
-              label="Instagram"
-              value={application.instagram || "Not provided"}
-            />
+                <InfoItem
+                  label="Mobile"
+                  value={
+                    application.mobile
+                  }
+                />
 
-            <InfoItem
-              label="Other Social Media"
-              value={
-                application.socialMedia ||
-                "Not provided"
-              }
-            />
-          </InfoSection>
+                <InfoItem
+                  label="Category"
+                  value={
+                    categoryName
+                  }
+                />
 
-          <InfoSection title="Application Information">
-            <InfoItem
-              label="Application ID"
-              value={application._id}
-            />
+                <InfoItem
+                  label="Submitted"
+                  value={formatDate(
+                    application.createdAt
+                  )}
+                />
+              </div>
 
-            <InfoItem
-              label="Submitted"
-              value={formatDateTime(
-                application.createdAt
+              {application.description && (
+                <div className="mt-5 border-t border-[#eee4d7] pt-5">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-[#8b7a6b]">
+                    Description
+                  </p>
+
+                  <p className="whitespace-pre-wrap text-sm leading-6 text-[#51463d]">
+                    {
+                      application.description
+                    }
+                  </p>
+                </div>
               )}
-            />
+            </section>
 
-            {application.approvedAt && (
-              <InfoItem
-                label="Approved"
-                value={formatDateTime(
-                  application.approvedAt
+            {/* =================================================
+                STALL ASSIGNMENT
+            ================================================= */}
+
+            {application.status ===
+              "pending" && (
+              <section className="rounded-2xl border border-[#eadfce] bg-white p-5 shadow-sm sm:p-6">
+                <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div>
+                    <h2 className="text-lg font-semibold text-[#3d3027]">
+                      Stall allocation
+                    </h2>
+
+                    <p className="mt-1 max-w-xl text-sm leading-5 text-[#75675b]">
+                      Select the stalls this
+                      applicant will be allowed
+                      to choose from during
+                      booking.
+                    </p>
+                  </div>
+
+                  <div className="rounded-full bg-[#f7efe2] px-3 py-1.5 text-sm font-semibold text-[#7d1727]">
+                    {
+                      selectedSlotIds.length
+                    }{" "}
+                    selected
+                  </div>
+                </div>
+
+                {loadingSlots ? (
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                    {Array.from({
+                      length: 8,
+                    }).map(
+                      (_, index) => (
+                        <div
+                          key={index}
+                          className="h-24 animate-pulse rounded-xl bg-[#f3ede4]"
+                        />
+                      )
+                    )}
+                  </div>
+                ) : slots.length ===
+                  0 ? (
+                  <div className="rounded-xl border border-dashed border-[#d9cbb9] bg-[#fcfaf7] px-5 py-8 text-center">
+                    <p className="font-medium text-[#51463d]">
+                      No stalls found
+                    </p>
+
+                    <p className="mt-1 text-sm text-[#8b7a6b]">
+                      There are no stalls
+                      available for this
+                      category.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                      {slots.map(
+                        (slot) => {
+                          const slotId =
+                            String(
+                              slot._id
+                            );
+
+                          const isSelected =
+                            selectedSlotIds.includes(
+                              slotId
+                            );
+
+                          const isAvailable =
+                            slot.status ===
+                            "available";
+
+                          return (
+                            <button
+                              key={
+                                slot._id
+                              }
+                              type="button"
+                              disabled={
+                                !isAvailable
+                              }
+                              onClick={() =>
+                                toggleSlot(
+                                  slot
+                                )
+                              }
+                              className={[
+                                "relative min-h-24 rounded-xl border p-3 text-left transition-all",
+                                "focus:outline-none focus:ring-2 focus:ring-[#a77932]/40",
+                                isAvailable
+                                  ? "cursor-pointer"
+                                  : "cursor-not-allowed opacity-50",
+                                isSelected
+                                  ? "border-[#7d1727] bg-[#7d1727] text-white shadow-md"
+                                  : isAvailable
+                                  ? "border-[#e2d6c6] bg-[#fcfaf7] text-[#3d3027] hover:-translate-y-0.5 hover:border-[#a77932] hover:shadow-sm"
+                                  : "border-[#e5ddd2] bg-[#f1ede7] text-[#81766c]",
+                              ].join(
+                                " "
+                              )}
+                            >
+                              {isSelected && (
+                                <span className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-white text-xs font-bold text-[#7d1727]">
+                                  ✓
+                                </span>
+                              )}
+
+                              <div className="flex h-full flex-col justify-between">
+                                <div>
+                                  <p
+                                    className={[
+                                      "text-base font-bold",
+                                      isSelected
+                                        ? "text-white"
+                                        : "",
+                                    ].join(
+                                      " "
+                                    )}
+                                  >
+                                    {
+                                      slot.slotNumber
+                                    }
+                                  </p>
+
+                                  <p
+                                    className={[
+                                      "mt-1 text-xs",
+                                      isSelected
+                                        ? "text-white/75"
+                                        : "text-[#8b7a6b]",
+                                    ].join(
+                                      " "
+                                    )}
+                                  >
+                                    ₹
+                                    {Number(
+                                      slot.price ||
+                                        0
+                                    ).toLocaleString(
+                                      "en-IN"
+                                    )}
+                                  </p>
+                                </div>
+
+                                {!isAvailable && (
+                                  <p className="mt-2 text-[10px] font-bold uppercase tracking-wider">
+                                    {
+                                      slot.status
+                                    }
+                                  </p>
+                                )}
+
+                                {isAvailable &&
+                                  !isSelected && (
+                                    <p className="mt-2 text-[10px] font-semibold uppercase tracking-wider text-[#a77932]">
+                                      Available
+                                    </p>
+                                  )}
+
+                                {isSelected && (
+                                  <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-white/80">
+                                    Allowed
+                                  </p>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        }
+                      )}
+                    </div>
+
+                    <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 border-t border-[#eee4d7] pt-4 text-xs text-[#75675b]">
+                      <Legend
+                        className="bg-[#fcfaf7] border-[#e2d6c6]"
+                        label="Available"
+                      />
+
+                      <Legend
+                        className="bg-[#7d1727] border-[#7d1727]"
+                        label="Selected"
+                      />
+
+                      <Legend
+                        className="bg-[#f1ede7] border-[#e5ddd2]"
+                        label="Unavailable"
+                      />
+                    </div>
+                  </>
                 )}
-              />
+              </section>
             )}
 
-            {application.rejectedAt && (
-              <InfoItem
-                label="Rejected"
-                value={formatDateTime(
-                  application.rejectedAt
+            {/* =================================================
+                ASSIGNED SLOTS AFTER APPROVAL
+            ================================================= */}
+
+            {application.status ===
+              "approved" && (
+              <section className="rounded-2xl border border-[#eadfce] bg-white p-5 shadow-sm sm:p-6">
+                <div className="mb-5">
+                  <h2 className="text-lg font-semibold text-[#3d3027]">
+                    Assigned stalls
+                  </h2>
+
+                  <p className="mt-1 text-sm text-[#75675b]">
+                    The applicant can choose
+                    one stall from this list.
+                  </p>
+                </div>
+
+                {assignedSlots.length ===
+                0 ? (
+                  <div className="rounded-xl border border-dashed border-red-200 bg-red-50 px-5 py-6 text-sm text-red-700">
+                    No stalls have been assigned
+                    to this application.
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-3">
+                    {assignedSlots.map(
+                      (slot) => {
+                        const slotNumber =
+                          typeof slot ===
+                          "string"
+                            ? slot
+                            : slot.slotNumber;
+
+                        return (
+                          <div
+                            key={
+                              typeof slot ===
+                              "string"
+                                ? slot
+                                : slot._id
+                            }
+                            className="rounded-xl border border-[#e2d6c6] bg-[#fcfaf7] px-4 py-3"
+                          >
+                            <p className="font-bold text-[#7d1727]">
+                              {slotNumber}
+                            </p>
+
+                            {typeof slot !==
+                              "string" &&
+                              slot.price !=
+                                null && (
+                                <p className="mt-0.5 text-xs text-[#8b7a6b]">
+                                  ₹
+                                  {Number(
+                                    slot.price
+                                  ).toLocaleString(
+                                    "en-IN"
+                                  )}
+                                </p>
+                              )}
+                          </div>
+                        );
+                      }
+                    )}
+                  </div>
                 )}
-              />
+              </section>
             )}
+          </div>
 
-            {application.rejectionReason && (
-              <InfoItem
-                label="Rejection Reason"
-                value={application.rejectionReason}
-                full
-              />
+          {/* =================================================
+              SIDE PANEL
+          ================================================= */}
+
+          <aside className="space-y-5">
+            <section className="rounded-2xl border border-[#eadfce] bg-white p-5 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#a77932]">
+                Status
+              </p>
+
+              <div className="mt-3">
+                <StatusBadge
+                  status={
+                    application.status
+                  }
+                />
+              </div>
+
+              {application.approvedAt && (
+                <p className="mt-3 text-xs text-[#8b7a6b]">
+                  Approved{" "}
+                  {formatDate(
+                    application.approvedAt
+                  )}
+                </p>
+              )}
+
+              {application.rejectedAt && (
+                <div className="mt-3">
+                  <p className="text-xs text-[#8b7a6b]">
+                    Rejected{" "}
+                    {formatDate(
+                      application.rejectedAt
+                    )}
+                  </p>
+
+                  {application.rejectionReason && (
+                    <p className="mt-2 rounded-lg bg-red-50 p-3 text-sm leading-5 text-red-700">
+                      {
+                        application.rejectionReason
+                      }
+                    </p>
+                  )}
+                </div>
+              )}
+            </section>
+
+            {/* =================================================
+                ACTIONS
+            ================================================= */}
+
+            {application.status ===
+              "pending" && (
+              <section className="rounded-2xl border border-[#eadfce] bg-white p-5 shadow-sm">
+                {!showReject ? (
+                  <>
+                    <button
+                      type="button"
+                      disabled={
+                        processing ||
+                        selectedSlotIds.length ===
+                          0
+                      }
+                      onClick={
+                        handleApprove
+                      }
+                      className="w-full rounded-xl bg-[#7d1727] px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#68131f] disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {processing
+                        ? "Processing..."
+                        : `Approve Application${
+                            selectedSlotIds.length
+                              ? ` (${selectedSlotIds.length} stalls)`
+                              : ""
+                          }`}
+                    </button>
+
+                    {selectedSlotIds.length ===
+                      0 && (
+                      <p className="mt-2 text-center text-xs text-[#9a8d80]">
+                        Select at least one
+                        stall to approve.
+                      </p>
+                    )}
+
+                    <div className="my-4 border-t border-[#eee4d7]" />
+
+                    <button
+                      type="button"
+                      disabled={
+                        processing
+                      }
+                      onClick={() =>
+                        setShowReject(
+                          true
+                        )
+                      }
+                      className="w-full rounded-xl border border-red-200 bg-white px-4 py-3 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                    >
+                      Reject Application
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="font-semibold text-[#3d3027]">
+                      Reject application
+                    </h3>
+
+                    <p className="mt-1 text-xs leading-5 text-[#75675b]">
+                      Please provide a reason
+                      for the applicant.
+                    </p>
+
+                    <textarea
+                      value={
+                        rejectionReason
+                      }
+                      onChange={(event) =>
+                        setRejectionReason(
+                          event.target
+                            .value
+                        )
+                      }
+                      rows={5}
+                      placeholder="Enter rejection reason..."
+                      className="mt-4 w-full resize-none rounded-xl border border-[#ddd1c1] bg-[#fcfaf7] px-3 py-3 text-sm text-[#3d3027] outline-none transition placeholder:text-[#a89b8e] focus:border-[#a77932] focus:ring-2 focus:ring-[#a77932]/10"
+                    />
+
+                    <button
+                      type="button"
+                      disabled={
+                        processing ||
+                        !rejectionReason.trim()
+                      }
+                      onClick={
+                        handleReject
+                      }
+                      className="mt-3 w-full rounded-xl bg-red-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      {processing
+                        ? "Processing..."
+                        : "Confirm Rejection"}
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={
+                        processing
+                      }
+                      onClick={() => {
+                        setShowReject(
+                          false
+                        );
+
+                        setRejectionReason(
+                          ""
+                        );
+
+                        setError("");
+                      }}
+                      className="mt-2 w-full rounded-xl px-4 py-3 text-sm font-medium text-[#75675b] transition hover:bg-[#f7f1e8]"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                )}
+              </section>
             )}
-          </InfoSection>
+          </aside>
         </div>
-      </section>
-    </main>
-  );
-}
-
-function InfoSection({ title, children }) {
-  return (
-    <section className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:p-8">
-      <h2 className="mb-6 text-lg font-bold text-slate-900">
-        {title}
-      </h2>
-
-      <div className="grid gap-6 sm:grid-cols-2">
-        {children}
       </div>
-    </section>
+    </div>
   );
 }
 
-function InfoItem({ label, value, full = false }) {
+/*
+ * =========================================================
+ * INFO ITEM
+ * =========================================================
+ */
+
+function InfoItem({
+  label,
+  value,
+}) {
   return (
-    <div className={full ? "sm:col-span-2" : ""}>
-      <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-wider text-[#9a8d80]">
         {label}
       </p>
 
-      <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
-        {value || "-"}
+      <p className="mt-1.5 break-words text-sm font-medium text-[#3d3027]">
+        {value || "—"}
       </p>
     </div>
   );
 }
 
-function formatDateTime(date) {
-  if (!date) return "-";
+/*
+ * =========================================================
+ * STATUS BADGE
+ * =========================================================
+ */
 
-  return new Date(date).toLocaleString("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function StatusBadge({
+  status,
+}) {
+  const config = {
+    pending: {
+      label: "Pending",
+      className:
+        "bg-amber-50 text-amber-700 border-amber-200",
+    },
+
+    approved: {
+      label: "Approved",
+      className:
+        "bg-green-50 text-green-700 border-green-200",
+    },
+
+    rejected: {
+      label: "Rejected",
+      className:
+        "bg-red-50 text-red-700 border-red-200",
+    },
+  };
+
+  const current =
+    config[status] ||
+    config.pending;
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-3 py-1.5 text-xs font-semibold ${current.className}`}
+    >
+      <span className="mr-2 h-1.5 w-1.5 rounded-full bg-current" />
+      {current.label}
+    </span>
+  );
+}
+
+/*
+ * =========================================================
+ * LEGEND
+ * =========================================================
+ */
+
+function Legend({
+  className,
+  label,
+}) {
+  return (
+    <span className="inline-flex items-center gap-2">
+      <span
+        className={`h-3 w-3 rounded border ${className}`}
+      />
+
+      <span>{label}</span>
+    </span>
+  );
+}
+
+/*
+ * =========================================================
+ * DATE FORMAT
+ * =========================================================
+ */
+
+function formatDate(
+  value
+) {
+  if (!value) {
+    return "—";
+  }
+
+  try {
+    return new Date(
+      value
+    ).toLocaleDateString(
+      "en-IN",
+      {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }
+    );
+  } catch {
+    return "—";
+  }
 }

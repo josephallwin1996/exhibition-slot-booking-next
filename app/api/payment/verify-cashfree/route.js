@@ -1,10 +1,7 @@
-import crypto from "crypto";
-
 import connectDB from "@/lib/mongodb";
+
 import Booking from "@/models/Booking";
 import Slot from "@/models/Slot";
-import razorpay from "@/lib/razorpay";
-
 import Application from "@/models/Application";
 
 import {
@@ -26,44 +23,22 @@ import {
 
 /*
  * =========================================================
- * VERIFY RAZORPAY PAYMENT SIGNATURE
+ * CASHFREE CONFIGURATION
  * =========================================================
  */
 
-function verifyPaymentSignature(
-  orderId,
-  paymentId,
-  receivedSignature,
-  secret
-) {
-  const body = `${orderId}|${paymentId}`;
+const CASHFREE_API_VERSION = "2025-01-01";
 
-  const expectedSignature = crypto
-    .createHmac("sha256", secret)
-    .update(body)
-    .digest("hex");
+function getCashfreeBaseUrl() {
+  const environment =
+    process.env.CASHFREE_ENVIRONMENT ||
+    "sandbox";
 
-  const expectedBuffer = Buffer.from(
-    expectedSignature,
-    "utf8"
-  );
-
-  const receivedBuffer = Buffer.from(
-    receivedSignature || "",
-    "utf8"
-  );
-
-  if (
-    expectedBuffer.length !==
-    receivedBuffer.length
-  ) {
-    return false;
+  if (environment === "production") {
+    return "https://api.cashfree.com/pg";
   }
 
-  return crypto.timingSafeEqual(
-    expectedBuffer,
-    receivedBuffer
-  );
+  return "https://sandbox.cashfree.com/pg";
 }
 
 /*
@@ -100,6 +75,70 @@ function normalizeWhatsAppNumber(
 
 /*
  * =========================================================
+ * GET CASHFREE ORDER
+ * =========================================================
+ */
+
+async function getCashfreeOrder(
+  orderId
+) {
+  const clientId =
+    process.env.CASHFREE_CLIENT_ID;
+
+  const clientSecret =
+    process.env.CASHFREE_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    throw new Error(
+      "Cashfree credentials are not configured."
+    );
+  }
+
+  const response = await fetch(
+    `${getCashfreeBaseUrl()}/orders/${encodeURIComponent(
+      orderId
+    )}`,
+    {
+      method: "GET",
+
+      headers: {
+        "x-api-version":
+          CASHFREE_API_VERSION,
+
+        "x-client-id":
+          clientId,
+
+        "x-client-secret":
+          clientSecret,
+
+        "Content-Type":
+          "application/json",
+      },
+
+      cache: "no-store",
+    }
+  );
+
+  const data =
+    await response.json();
+
+  if (!response.ok) {
+    console.error(
+      "Cashfree order verification failed:",
+      data
+    );
+
+    throw new Error(
+      data?.message ||
+        "Unable to verify Cashfree payment."
+    );
+  }
+
+  return data;
+}
+
+/*
+ * =========================================================
  * PAYMENT VERIFICATION
  * =========================================================
  */
@@ -111,9 +150,7 @@ export async function POST(request) {
 
     const {
       bookingReference,
-      razorpayPaymentId,
-      razorpayOrderId,
-      razorpaySignature,
+      cashfreeOrderId,
     } = body;
 
     /*
@@ -124,9 +161,7 @@ export async function POST(request) {
 
     if (
       !bookingReference ||
-      !razorpayPaymentId ||
-      !razorpayOrderId ||
-      !razorpaySignature
+      !cashfreeOrderId
     ) {
       return Response.json(
         {
@@ -178,6 +213,7 @@ export async function POST(request) {
     ) {
       return Response.json({
         success: true,
+
         alreadyPaid: true,
 
         message:
@@ -226,16 +262,16 @@ export async function POST(request) {
 
     /*
      * -------------------------------------------------------
-     * Verify Razorpay order exists
+     * Verify Cashfree order exists
      * -------------------------------------------------------
      */
 
-    if (!booking.razorpayOrderId) {
+    if (!booking.cashfreeOrderId) {
       return Response.json(
         {
           success: false,
           message:
-            "No Razorpay order is associated with this booking.",
+            "No Cashfree order is associated with this booking.",
         },
         {
           status: 409,
@@ -250,8 +286,8 @@ export async function POST(request) {
      */
 
     if (
-      booking.razorpayOrderId !==
-      razorpayOrderId
+      booking.cashfreeOrderId !==
+      cashfreeOrderId
     ) {
       return Response.json(
         {
@@ -267,84 +303,37 @@ export async function POST(request) {
 
     /*
      * -------------------------------------------------------
-     * Razorpay secret
-     * -------------------------------------------------------
-     */
-
-    const secret =
-      process.env.RAZORPAY_KEY_SECRET;
-
-    if (!secret) {
-      console.error(
-        "RAZORPAY_KEY_SECRET is missing."
-      );
-
-      return Response.json(
-        {
-          success: false,
-          message:
-            "Payment configuration error.",
-        },
-        {
-          status: 500,
-        }
-      );
-    }
-
-    /*
-     * -------------------------------------------------------
      * STEP 1
-     * Verify signature
+     *
+     * Ask Cashfree directly for the actual
+     * server-side order status.
      * -------------------------------------------------------
      */
 
-    const signatureValid =
-      verifyPaymentSignature(
-        booking.razorpayOrderId,
-        razorpayPaymentId,
-        razorpaySignature,
-        secret
+    const cashfreeOrder =
+      await getCashfreeOrder(
+        booking.cashfreeOrderId
       );
-
-    if (!signatureValid) {
-      console.warn(
-        "Invalid Razorpay signature:",
-        bookingReference
-      );
-
-      return Response.json(
-        {
-          success: false,
-          message:
-            "Payment verification failed.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
 
     /*
      * -------------------------------------------------------
      * STEP 2
-     * Fetch actual payment from Razorpay
+     * Verify order ID
      * -------------------------------------------------------
      */
 
-    const payment =
-      await razorpay.payments.fetch(
-        razorpayPaymentId
-      );
-
-    if (!payment) {
+    if (
+      cashfreeOrder.order_id !==
+      booking.cashfreeOrderId
+    ) {
       return Response.json(
         {
           success: false,
           message:
-            "Payment could not be found.",
+            "Payment order ID mismatch.",
         },
         {
-          status: 404,
+          status: 400,
         }
       );
     }
@@ -352,72 +341,33 @@ export async function POST(request) {
     /*
      * -------------------------------------------------------
      * STEP 3
-     * Verify payment ID
-     * -------------------------------------------------------
-     */
-
-    if (
-      payment.id !==
-      razorpayPaymentId
-    ) {
-      return Response.json(
-        {
-          success: false,
-          message:
-            "Payment ID mismatch.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    /*
-     * -------------------------------------------------------
-     * STEP 4
-     * Verify order ID
-     * -------------------------------------------------------
-     */
-
-    if (
-      payment.order_id !==
-      booking.razorpayOrderId
-    ) {
-      return Response.json(
-        {
-          success: false,
-          message:
-            "Payment belongs to a different order.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    /*
-     * -------------------------------------------------------
-     * STEP 5
      * Verify amount
      * -------------------------------------------------------
      */
 
     const expectedAmount =
-      Math.round(
-        Number(booking.total) * 100
+      Number(
+        Number(booking.total).toFixed(2)
+      );
+
+    const receivedAmount =
+      Number(
+        cashfreeOrder.order_amount
       );
 
     if (
-      Number(payment.amount) !==
-      expectedAmount
+      !Number.isFinite(
+        receivedAmount
+      ) ||
+      receivedAmount !==
+        expectedAmount
     ) {
       console.error(
-        "Payment amount mismatch:",
+        "Cashfree payment amount mismatch:",
         {
           bookingReference,
           expectedAmount,
-          receivedAmount:
-            payment.amount,
+          receivedAmount,
         }
       );
 
@@ -435,13 +385,13 @@ export async function POST(request) {
 
     /*
      * -------------------------------------------------------
-     * STEP 6
+     * STEP 4
      * Verify currency
      * -------------------------------------------------------
      */
 
     if (
-      payment.currency !==
+      cashfreeOrder.order_currency !==
       "INR"
     ) {
       return Response.json(
@@ -458,42 +408,22 @@ export async function POST(request) {
 
     /*
      * -------------------------------------------------------
-     * STEP 7
-     * Payment must be captured
+     * STEP 5
+     *
+     * Cashfree order is considered successfully
+     * paid only when order_status === "PAID".
      * -------------------------------------------------------
      */
 
     if (
-      payment.status !==
-      "captured"
+      cashfreeOrder.order_status !==
+      "PAID"
     ) {
       return Response.json(
         {
           success: false,
           message:
-            `Payment is not captured. Current status: ${payment.status}`,
-        },
-        {
-          status: 409,
-        }
-      );
-    }
-
-    /*
-     * -------------------------------------------------------
-     * STEP 8
-     * Razorpay captured flag
-     * -------------------------------------------------------
-     */
-
-    if (
-      payment.captured !== true
-    ) {
-      return Response.json(
-        {
-          success: false,
-          message:
-            "Payment has not been captured.",
+            `Payment is not completed. Current status: ${cashfreeOrder.order_status}`,
         },
         {
           status: 409,
@@ -512,14 +442,19 @@ export async function POST(request) {
     booking.paidAt =
       new Date();
 
-    booking.razorpayPaymentId =
-      razorpayPaymentId;
+    /*
+     * Cashfree order ID
+     */
+    booking.cashfreeOrderId =
+      cashfreeOrder.order_id;
 
-    booking.razorpaySignature =
-      razorpaySignature;
-
-    booking.paymentId =
-      razorpayPaymentId;
+    /*
+     * We don't have a Razorpay-style
+     * signature here.
+     *
+     * Payment ID will be stored below
+     * when available from Cashfree.
+     */
 
     booking.paymentStatus =
       "paid";
@@ -527,18 +462,119 @@ export async function POST(request) {
     booking.status =
       "paid";
 
+    /*
+     * -------------------------------------------------------
+     * Get latest Cashfree payment ID
+     * -------------------------------------------------------
+     *
+     * Cashfree can have multiple payment
+     * attempts against one order.
+     *
+     * We retrieve the payments for this order
+     * and find the successful payment.
+     * -------------------------------------------------------
+     */
+
+    let successfulPayment = null;
+
+    try {
+      const clientId =
+        process.env.CASHFREE_CLIENT_ID;
+
+      const clientSecret =
+        process.env.CASHFREE_CLIENT_SECRET;
+
+      const paymentsResponse =
+        await fetch(
+          `${getCashfreeBaseUrl()}/orders/${encodeURIComponent(
+            booking.cashfreeOrderId
+          )}/payments`,
+          {
+            method: "GET",
+
+            headers: {
+              "x-api-version":
+                CASHFREE_API_VERSION,
+
+              "x-client-id":
+                clientId,
+
+              "x-client-secret":
+                clientSecret,
+
+              "Content-Type":
+                "application/json",
+            },
+
+            cache: "no-store",
+          }
+        );
+
+      const paymentsData =
+        await paymentsResponse.json();
+
+      if (paymentsResponse.ok) {
+        successfulPayment =
+          Array.isArray(
+            paymentsData
+          )
+            ? paymentsData.find(
+                (payment) =>
+                  payment.payment_status ===
+                  "SUCCESS"
+              )
+            : null;
+      }
+    } catch (paymentLookupError) {
+      console.error(
+        "Cashfree payment lookup error:",
+        paymentLookupError
+      );
+    }
+
+    /*
+     * Store Cashfree payment ID
+     * when available.
+     */
+    if (successfulPayment) {
+      booking.cashfreePaymentId =
+        successfulPayment.cf_payment_id ||
+        successfulPayment.payment_id ||
+        null;
+
+      booking.paymentId =
+        booking.cashfreePaymentId;
+    } else {
+      /*
+       * The order itself is PAID, so the
+       * booking is still safely confirmed.
+       */
+      booking.paymentId =
+        booking.cashfreeOrderId;
+    }
+
     await booking.save();
+
+    /*
+     * -------------------------------------------------------
+     * Mark slot as booked
+     * -------------------------------------------------------
+     */
 
     await Slot.findByIdAndUpdate(
       booking.slotId,
       {
         $set: {
           status: "booked",
+
+          bookingId:
+            booking._id,
         },
       },
-      { new: true }
+      {
+        new: true,
+      }
     );
-
 
     /*
      * =======================================================
@@ -617,7 +653,7 @@ export async function POST(request) {
             booking.total,
 
           paymentId:
-            booking.razorpayPaymentId,
+            booking.paymentId,
 
           paidAt:
             booking.paidAt,
@@ -664,7 +700,7 @@ export async function POST(request) {
             booking.total,
 
           paymentId:
-            booking.razorpayPaymentId,
+            booking.paymentId,
         });
       } catch (emailError) {
         console.error(
@@ -676,18 +712,6 @@ export async function POST(request) {
       /*
        * =====================================================
        * WHATSAPP — APPLICANT
-       * =====================================================
-       *
-       * Template:
-       *
-       * booking_confirmed
-       *
-       * {{1}} Contact person
-       * {{2}} Business name
-       * {{3}} Booking reference
-       * {{4}} Stall number
-       * {{5}} Total
-       * {{6}} Payment ID
        * =====================================================
        */
 
@@ -746,12 +770,6 @@ export async function POST(request) {
                         booking.total
                       ),
                   },
-
-                  // {
-                  //   type: "text",
-                  //   text:
-                  //     booking.razorpayPaymentId,
-                  // },
                 ],
               },
             ],
@@ -763,10 +781,8 @@ export async function POST(request) {
           );
         } catch (whatsappError) {
           /*
-           * IMPORTANT:
-           *
            * WhatsApp failure must NOT
-           * affect the successful payment.
+           * affect successful payment.
            */
 
           console.error(
@@ -783,18 +799,6 @@ export async function POST(request) {
       /*
        * =====================================================
        * WHATSAPP — ADMIN
-       * =====================================================
-       *
-       * Template:
-       *
-       * payment_confirmed_admin
-       *
-       * {{1}} Business name
-       * {{2}} Contact person
-       * {{3}} Booking reference
-       * {{4}} Stall number
-       * {{5}} Total
-       * {{6}} Payment ID
        * =====================================================
        */
 
@@ -854,12 +858,6 @@ export async function POST(request) {
                         booking.total
                       ),
                   },
-
-                  // {
-                  //   type: "text",
-                  //   text:
-                  //     booking.razorpayPaymentId,
-                  // },
                 ],
               },
             ],
@@ -872,7 +870,7 @@ export async function POST(request) {
         } catch (whatsappError) {
           /*
            * WhatsApp failure must NOT
-           * affect the successful payment.
+           * affect successful payment.
            */
 
           console.error(
@@ -918,7 +916,7 @@ export async function POST(request) {
     });
   } catch (error) {
     console.error(
-      "Payment verification error:",
+      "Cashfree payment verification error:",
       error
     );
 

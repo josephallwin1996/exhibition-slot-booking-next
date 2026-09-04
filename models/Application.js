@@ -27,25 +27,34 @@ const applicationSchema = new mongoose.Schema(
       trim: true,
     },
 
-    // Legacy category field.
-    // Keep this temporarily so existing
-    // applications and booking logic continue working.
     categoryName: {
       type: String,
       default: null,
     },
 
-    // New dynamic category reference.
     categoryId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
       default: null,
     },
 
+    /*
+     * Slots that the admin has approved for this applicant.
+     *
+     * The applicant will later be able to choose
+     * one slot from this list.
+     */
+    allowedSlotIds: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Slot",
+      },
+    ],
+
     description: {
       type: String,
       trim: true,
-      default: ""
+      default: "",
     },
 
     instagram: {

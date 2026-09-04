@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import Script from "next/script";
 
 export default function PaymentPage() {
   const params = useParams();
@@ -24,17 +23,15 @@ export default function PaymentPage() {
       setLoading(true);
       setError("");
 
-      /*
-       * We'll create this API in the next section.
-       */
       const response = await fetch(
         `/api/booking/${token}/payment`,
         {
           cache: "no-store",
         }
       );
-      console.log(response, "jkdsj")
-      const data = await response.json();
+
+      const data =
+        await response.json();
 
       if (!response.ok) {
         throw new Error(
@@ -46,7 +43,11 @@ export default function PaymentPage() {
       setBooking(data.booking);
     } catch (error) {
       console.error(error);
-      setError(error.message);
+
+      setError(
+        error.message ||
+          "Unable to load booking."
+      );
     } finally {
       setLoading(false);
     }
@@ -59,10 +60,10 @@ export default function PaymentPage() {
 
       /*
        * Step 1:
-       * Create/get Razorpay order.
+       * Create/get Cashfree order.
        */
       const response = await fetch(
-        "/api/payment/create-order",
+        "/api/payment/create-order-cashfree",
         {
           method: "POST",
 
@@ -90,168 +91,97 @@ export default function PaymentPage() {
 
       /*
        * Step 2:
-       * Open Razorpay Checkout.
+       * Open Cashfree Checkout.
        */
-      openRazorpayCheckout(
+      await openCashfreeCheckout(
         data.order
       );
     } catch (error) {
       console.error(error);
 
-      setError(error.message);
-      setPaying(false);
-    }
-  }
-
-  async function verifyPayment(response) {
-  try {
-    setError("");
-
-    /*
-     * Keep the loading state while
-     * our server verifies payment.
-     */
-    setPaying(true);
-
-    const verifyResponse =
-      await fetch(
-        "/api/payment/verify",
-        {
-          method: "POST",
-
-          headers: {
-            "Content-Type":
-              "application/json",
-          },
-
-          body: JSON.stringify({
-            bookingReference:
-              booking.bookingReference,
-
-            razorpayPaymentId:
-              response.razorpay_payment_id,
-
-            razorpayOrderId:
-              response.razorpay_order_id,
-
-            razorpaySignature:
-              response.razorpay_signature,
-          }),
-        }
-      );
-
-    const data =
-      await verifyResponse.json();
-
-    if (!verifyResponse.ok) {
-      throw new Error(
-        data.message ||
-          "Payment verification failed."
-      );
-    }
-
-    /*
-     * Payment is now verified
-     * by our server.
-     */
-    router.push(
-      `/book/${token}/payment/success`
-    );
-  } catch (error) {
-    console.error(error);
-
-    setError(
-      error.message ||
-        "Payment verification failed."
-    );
-
-    setPaying(false);
-  }
-}
-
-  function openRazorpayCheckout(order) {
-    if (!window.Razorpay) {
       setError(
-        "Payment system is still loading. Please try again."
+        error.message ||
+          "Unable to start payment."
       );
 
       setPaying(false);
-
-      return;
     }
+  }
 
-    const options = {
-      key: process.env
-        .NEXT_PUBLIC_RAZORPAY_KEY_ID,
-
-      amount: order.amount,
-
-      currency: order.currency,
-
-      name: "Exhibition",
-
-      description:
-        `Exhibition Stall Booking - ${order.bookingReference}`,
-
-      order_id: order.id,
-
-      handler: async function (response) {
-        await verifyPayment(response);
-     },
-
-      prefill: {
-        name:
-          booking.contactPerson || "",
-
-        email:
-          booking.email || "",
-
-        contact:
-          booking.mobileNumber || "",
-      },
-
-      notes: {
-        bookingReference:
-          booking.bookingReference,
-      },
-
-      theme: {
-        color: "#111827",
-      },
-
-      modal: {
-        ondismiss: function () {
-          setPaying(false);
-        },
-      },
-    };
-
-    const razorpay =
-      new window.Razorpay(options);
-
-    razorpay.on(
-      "payment.failed",
-      function (response) {
-        console.error(
-          "Payment failed:",
-          response
+  async function openCashfreeCheckout(
+    order
+  ) {
+    try {
+      /*
+       * Dynamically import Cashfree so
+       * it only loads on the client.
+       */
+      const { load } =
+        await import(
+          "@cashfreepayments/cashfree-js"
         );
 
-        setError(
-          response?.error?.description ||
-            "Payment failed. Please try again."
-        );
+      const cashfree =
+        await load({
+          mode:
+            process.env
+              .NEXT_PUBLIC_CASHFREE_ENVIRONMENT ===
+            "production"
+              ? "production"
+              : "sandbox",
+        });
 
-        setPaying(false);
+      if (!cashfree) {
+        throw new Error(
+          "Unable to load Cashfree payment system."
+        );
       }
-    );
 
-    razorpay.open();
+      /*
+       * Cashfree Hosted Checkout.
+       */
+      const result =
+        await cashfree.checkout({
+          paymentSessionId:
+            order.paymentSessionId,
+
+          redirectTarget:
+            "_self",
+        });
+
+      /*
+       * In redirect mode Cashfree will
+       * navigate the browser to the
+       * return URL.
+       *
+       * If Cashfree reports an immediate
+       * checkout error, show it here.
+       */
+      if (
+        result?.error
+      ) {
+        throw new Error(
+          result.error.message ||
+            "Unable to open Cashfree checkout."
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Cashfree checkout error:",
+        error
+      );
+
+      setError(
+        error.message ||
+          "Unable to open payment checkout."
+      );
+
+      setPaying(false);
+    }
   }
 
   if (loading) {
     return (
-      
       <main className="flex min-h-screen items-center justify-center bg-slate-100">
         <div className="text-center">
           <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-300 border-t-slate-950" />
@@ -285,11 +215,6 @@ export default function PaymentPage() {
   }
 
   return (
-    <>
-    <Script
-      src="https://checkout.razorpay.com/v1/checkout.js"
-      strategy="afterInteractive"
-    />
     <main className="min-h-screen bg-slate-100">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6">
@@ -332,7 +257,7 @@ export default function PaymentPage() {
               <DetailRow
                 label="Category"
                 value={
-                  booking.category.name
+                  booking.category?.name
                 }
               />
 
@@ -453,17 +378,19 @@ export default function PaymentPage() {
 
             <p className="mt-4 text-center text-xs leading-5 text-slate-500">
               You will be securely redirected to
-              Razorpay's payment window.
+              Cashfree's payment window.
             </p>
           </div>
         </div>
       </section>
     </main>
-    </>
   );
 }
 
-function DetailRow({ label, value }) {
+function DetailRow({
+  label,
+  value,
+}) {
   return (
     <div className="flex items-center justify-between gap-6 border-b border-slate-100 pb-4">
       <span className="text-sm text-slate-500">

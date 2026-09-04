@@ -5,7 +5,7 @@ import Application from "@/models/Application";
 import Slot from "@/models/Slot";
 import Booking from "@/models/Booking";
 
-const RESERVATION_MINUTES = 10;
+const RESERVATION_MINUTES = 1;
 
 export async function POST(
   request,
@@ -109,7 +109,6 @@ export async function POST(
 
     const existingSlot = await Slot.findById(slotId).lean();
 
-    console.log("Existing slot:", existingSlot);
 
    const slot =
   await Slot.findOneAndUpdate(
@@ -144,7 +143,6 @@ export async function POST(
     }
   );
 
-    console.log("Reserved slot:", slot);
 
     if (!slot) {
       return Response.json(
@@ -162,41 +160,89 @@ export async function POST(
     /*
      * Create a temporary booking.
      */
-    const booking =
-      await Booking.create({
-        applicationId:
-          application._id,
+    // const booking =
+    //   await Booking.create({
+    //     applicationId:
+    //       application._id,
+
+    //     slotId: slot._id,
+
+    //     slotNumber:
+    //       slot.slotNumber,
+
+    //     category:
+    //       slot.category,
+
+    //     slotPrice:
+    //       slot.price,
+
+    //     addOns: [],
+
+    //     addOnTotal: 0,
+
+    //     subtotal:
+    //       slot.price,
+
+    //     total:
+    //       slot.price,
+
+    //     status: "reserved",
+
+    //     paymentStatus:
+    //       "pending",
+
+    //     reservationExpiresAt:
+    //       expiresAt,
+    //   });
+
+    let booking = await Booking.findOne({
+      applicationId: application._id,
+      status: "reserved",
+      paymentStatus: "pending",
+    });
+
+    if (booking) {
+      // Update existing temporary booking
+      booking.slotId = slot._id;
+      booking.slotNumber = slot.slotNumber;
+      booking.category = slot.category;
+      booking.slotPrice = slot.price;
+
+      booking.addOns = [];
+      booking.addOnTotal = 0;
+
+      booking.subtotal = slot.price;
+      booking.total = slot.price;
+
+      booking.reservationExpiresAt = expiresAt;
+
+      await booking.save();
+    } else {
+      // Create first temporary booking
+      booking = await Booking.create({
+        applicationId: application._id,
 
         slotId: slot._id,
 
-        slotNumber:
-          slot.slotNumber,
+        slotNumber: slot.slotNumber,
 
-        category:
-          slot.category,
+        category: slot.category,
 
-        slotPrice:
-          slot.price,
+        slotPrice: slot.price,
 
         addOns: [],
-
         addOnTotal: 0,
 
-        subtotal:
-          slot.price,
-
-        total:
-          slot.price,
+        subtotal: slot.price,
+        total: slot.price,
 
         status: "reserved",
 
-        paymentStatus:
-          "pending",
+        paymentStatus: "pending",
 
-        reservationExpiresAt:
-          expiresAt,
+        reservationExpiresAt: expiresAt,
       });
-
+    }
     /*
      * Store the booking reference on the slot.
      */

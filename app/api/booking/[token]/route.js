@@ -25,7 +25,7 @@ export async function GET(request, { params }) {
       bookingToken: token,
       status: "approved",
     })
-    .populate("categoryId", "name")
+    .populate("categoryId", "name slug")
     .lean();
 
     const booking = await Booking.findOne({
@@ -46,7 +46,7 @@ export async function GET(request, { params }) {
         }
       );
     }
-
+    
     return Response.json({
       success: true,
       application: {
@@ -57,6 +57,7 @@ export async function GET(request, { params }) {
         mobile: application.mobile,
         category: application.categoryName,
         categoryId: application.categoryId,
+        allowedSlotIds: application.allowedSlotIds,
         status: application.status,
       },
       bookingstatus : booking?.status || "pending",

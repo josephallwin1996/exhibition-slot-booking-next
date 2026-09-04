@@ -152,6 +152,25 @@ const bookingSchema = new mongoose.Schema(
       default: null,
     },
 
+    cashfreeOrderId: {
+      type: String,
+      default: null,
+    },
+
+    cashfreeOrderId: {
+      type: String,
+      default: null,
+    },
+
+    cashfreePaymentId: {
+      type: String,
+      default: null,
+    },
+    
+    cashfreePaymentSessionId: {
+      type: String,
+      default: null,
+    },
     invoiceNumber: {
       type: String,
       default: null,
