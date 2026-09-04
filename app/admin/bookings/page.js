@@ -350,13 +350,13 @@ export default function AdminBookingsPage() {
 
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="mb-2 flex items-center gap-2">
+            {/* <div className="mb-2 flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-emerald-500" />
 
               <span className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
                 Exhibition Management
               </span>
-            </div>
+            </div> */}
 
             <h1 className="text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl">
               Bookings

@@ -73,8 +73,7 @@ export default function AddOnsPage() {
 
       if (!response.ok) {
         throw new Error(
-          data.message ||
-            "Unable to load add-ons."
+          data.message || "Unable to load add-ons."
         );
       }
 
@@ -99,30 +98,18 @@ export default function AddOnsPage() {
 
   return (
     <main className="min-h-screen bg-slate-100">
+      {/* Header */}
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-600">
-              Exhibition Admin
-            </p>
-
-            <h1 className="mt-1 text-2xl font-bold text-slate-900">
-              Add-on Management
-            </h1>
-          </div>
-
-          {/* <a
-            href="/admin/dashboard"
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            Dashboard
-          </a> */}
+        <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
+          <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
+            Add-on Management
+          </h1>
         </div>
       </header>
 
-      <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <section className="mx-auto max-w-7xl px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
         {/* Stats */}
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-4">
           <StatCard
             label="Total Add-ons"
             value={stats.total}
@@ -140,9 +127,11 @@ export default function AddOnsPage() {
         </div>
 
         {/* Add-on List */}
-        <div className="mt-8 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-          <div className="border-b border-slate-200 p-5 sm:p-6">
-            <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
+        <div className="mt-5 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 sm:mt-8">
+          {/* Toolbar */}
+          <div className="border-b border-slate-200 p-4 sm:p-6">
+            <div className="space-y-5">
+              {/* Title */}
               <div>
                 <h2 className="text-lg font-bold text-slate-900">
                   Add-ons
@@ -153,10 +142,12 @@ export default function AddOnsPage() {
                 </p>
               </div>
 
-              <div className="flex flex-col gap-3 md:flex-row">
+              {/* Filters */}
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {/* Search */}
                 <form
                   onSubmit={handleSearch}
-                  className="flex"
+                  className="flex min-w-0 sm:col-span-2 lg:col-span-1"
                 >
                   <input
                     type="search"
@@ -165,23 +156,24 @@ export default function AddOnsPage() {
                       setSearch(event.target.value)
                     }
                     placeholder="Search add-ons..."
-                    className="w-full rounded-l-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:border-slate-900 md:w-48"
+                    className="min-w-0 flex-1 rounded-l-xl border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-slate-900 sm:px-4"
                   />
 
                   <button
                     type="submit"
-                    className="rounded-r-xl bg-slate-950 px-4 text-sm font-semibold text-white"
+                    className="shrink-0 rounded-r-xl bg-slate-950 px-3 text-sm font-semibold text-white hover:bg-slate-800 sm:px-4"
                   >
                     Search
                   </button>
                 </form>
 
+                {/* Category */}
                 <select
                   value={category}
                   onChange={(event) =>
                     setCategory(event.target.value)
                   }
-                  className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-slate-900"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-slate-900 sm:px-4"
                 >
                   <option value="all">
                     All Categories
@@ -194,12 +186,13 @@ export default function AddOnsPage() {
                   ))}
                 </select>
 
+                {/* Status */}
                 <select
                   value={status}
                   onChange={(event) =>
                     setStatus(event.target.value)
                   }
-                  className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm outline-none focus:border-slate-900"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-slate-900 sm:px-4"
                 >
                   <option value="all">
                     All Statuses
@@ -212,9 +205,10 @@ export default function AddOnsPage() {
                   ))}
                 </select>
 
+                {/* Add Button */}
                 <button
                   onClick={() => setCreating(true)}
-                  className="rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-bold text-white hover:bg-slate-800"
+                  className="w-full rounded-xl bg-slate-950 px-5 py-2.5 text-sm font-bold text-white hover:bg-slate-800"
                 >
                   + Add Add-on
                 </button>
@@ -222,18 +216,20 @@ export default function AddOnsPage() {
             </div>
           </div>
 
+          {/* Error */}
           {error && (
-            <div className="m-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="m-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 sm:m-5">
               {error}
             </div>
           )}
 
+          {/* Loading */}
           {loading ? (
-            <div className="p-12 text-center text-sm text-slate-500">
+            <div className="p-10 text-center text-sm text-slate-500 sm:p-12">
               Loading add-ons...
             </div>
           ) : addOns.length === 0 ? (
-            <div className="p-12 text-center">
+            <div className="p-10 text-center sm:p-12">
               <h3 className="font-semibold text-slate-900">
                 No add-ons found
               </h3>
@@ -243,100 +239,184 @@ export default function AddOnsPage() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px]">
-                <thead className="bg-slate-50">
-                  <tr className="border-b border-slate-200">
-                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Add-on
-                    </th>
-
-                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Category
-                    </th>
-
-                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Price
-                    </th>
-
-                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Max Qty
-                    </th>
-
-                    <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Status
-                    </th>
-
-                    <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Action
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-slate-100">
-                  {addOns.map((addOn) => (
-                    <tr
-                      key={addOn._id}
-                      className="hover:bg-slate-50"
-                    >
-                      <td className="px-6 py-5">
-                        <p className="font-semibold text-slate-900">
+            <>
+              {/* ========================= */}
+              {/* MOBILE CARDS */}
+              {/* ========================= */}
+              <div className="divide-y divide-slate-100 md:hidden">
+                {addOns.map((addOn) => (
+                  <div
+                    key={addOn._id}
+                    className="p-4"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="truncate font-semibold text-slate-900">
                           {addOn.name}
-                        </p>
+                        </h3>
 
                         {addOn.description && (
-                          <p className="mt-1 max-w-sm text-sm text-slate-500">
+                          <p className="mt-1 line-clamp-2 text-sm text-slate-500">
                             {addOn.description}
                           </p>
                         )}
-                      </td>
+                      </div>
 
-                      <td className="px-6 py-5 text-sm font-medium text-slate-700">
-                        {addOn.category}
-                      </td>
+                      <span
+                        className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold capitalize ${
+                          statusStyles[addOn.status]
+                        }`}
+                      >
+                        {addOn.status}
+                      </span>
+                    </div>
 
-                      <td className="px-6 py-5 text-sm font-bold text-slate-900">
-                        ₹
-                        {Number(
-                          addOn.price
-                        ).toLocaleString("en-IN")}
-                      </td>
+                    <div className="mt-4 grid grid-cols-3 gap-2 rounded-xl bg-slate-50 p-3">
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          Category
+                        </p>
 
-                      <td className="px-6 py-5 text-sm text-slate-700">
-                        {addOn.maxQuantity}
-                      </td>
+                        <p className="mt-1 truncate text-sm font-semibold text-slate-700">
+                          {addOn.category}
+                        </p>
+                      </div>
 
-                      <td className="px-6 py-5">
-                        <span
-                          className={`inline-flex rounded-full px-3 py-1 text-xs font-bold capitalize ${
-                            statusStyles[
-                              addOn.status
-                            ]
-                          }`}
-                        >
-                          {addOn.status}
-                        </span>
-                      </td>
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          Price
+                        </p>
 
-                      <td className="px-6 py-5 text-right">
-                        <button
-                          onClick={() =>
-                            setEditingAddOn(addOn)
-                          }
-                          className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-                        >
-                          Edit
-                        </button>
-                      </td>
+                        <p className="mt-1 truncate text-sm font-bold text-slate-900">
+                          ₹
+                          {Number(
+                            addOn.price
+                          ).toLocaleString("en-IN")}
+                        </p>
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                          Max Qty
+                        </p>
+
+                        <p className="mt-1 text-sm font-semibold text-slate-700">
+                          {addOn.maxQuantity}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() =>
+                        setEditingAddOn(addOn)
+                      }
+                      className="mt-3 w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                    >
+                      Edit Add-on
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* ========================= */}
+              {/* DESKTOP TABLE */}
+              {/* ========================= */}
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full">
+                  <thead className="bg-slate-50">
+                    <tr className="border-b border-slate-200">
+                      <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
+                        Add-on
+                      </th>
+
+                      <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
+                        Category
+                      </th>
+
+                      <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
+                        Price
+                      </th>
+
+                      <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
+                        Max Qty
+                      </th>
+
+                      <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-slate-500">
+                        Status
+                      </th>
+
+                      <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-slate-500">
+                        Action
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+
+                  <tbody className="divide-y divide-slate-100">
+                    {addOns.map((addOn) => (
+                      <tr
+                        key={addOn._id}
+                        className="hover:bg-slate-50"
+                      >
+                        <td className="px-6 py-5">
+                          <p className="font-semibold text-slate-900">
+                            {addOn.name}
+                          </p>
+
+                          {addOn.description && (
+                            <p className="mt-1 max-w-sm text-sm text-slate-500">
+                              {addOn.description}
+                            </p>
+                          )}
+                        </td>
+
+                        <td className="px-6 py-5 text-sm font-medium text-slate-700">
+                          {addOn.category}
+                        </td>
+
+                        <td className="px-6 py-5 text-sm font-bold text-slate-900">
+                          ₹
+                          {Number(
+                            addOn.price
+                          ).toLocaleString("en-IN")}
+                        </td>
+
+                        <td className="px-6 py-5 text-sm text-slate-700">
+                          {addOn.maxQuantity}
+                        </td>
+
+                        <td className="px-6 py-5">
+                          <span
+                            className={`inline-flex rounded-full px-3 py-1 text-xs font-bold capitalize ${
+                              statusStyles[
+                                addOn.status
+                              ]
+                            }`}
+                          >
+                            {addOn.status}
+                          </span>
+                        </td>
+
+                        <td className="px-6 py-5 text-right">
+                          <button
+                            onClick={() =>
+                              setEditingAddOn(addOn)
+                            }
+                            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                          >
+                            Edit
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </section>
 
+      {/* Modal */}
       {(creating || editingAddOn) && (
         <AddOnModal
           addOn={editingAddOn}
@@ -443,17 +523,18 @@ function AddOnModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/60 px-4 py-8">
-      <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl sm:p-8">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-600">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/60 px-3 py-4 sm:items-center sm:px-4 sm:py-8">
+      <div className="my-auto w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+        {/* Modal Header */}
+        <div className="flex items-start justify-between gap-4 border-b border-slate-100 p-5 sm:p-8">
+          <div className="min-w-0">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-600 sm:text-xs">
               {editing
                 ? "Edit Add-on"
                 : "New Add-on"}
             </p>
 
-            <h2 className="mt-2 text-2xl font-bold text-slate-900">
+            <h2 className="mt-2 truncate text-xl font-bold text-slate-900 sm:text-2xl">
               {editing
                 ? addOn.name
                 : "Create Add-on"}
@@ -462,137 +543,146 @@ function AddOnModal({
 
           <button
             onClick={onClose}
-            className="text-2xl text-slate-400 hover:text-slate-700"
+            disabled={saving}
+            aria-label="Close"
+            className="shrink-0 rounded-lg p-1 text-2xl leading-none text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
           >
             ×
           </button>
         </div>
 
-        <div className="mt-6 space-y-5">
-          <Field label="Name">
-            <input
-              value={name}
-              onChange={(event) =>
-                setName(event.target.value)
-              }
-              placeholder="Extra Chair"
-              className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
-            />
-          </Field>
-
-          <Field label="Description">
-            <textarea
-              rows={3}
-              value={description}
-              onChange={(event) =>
-                setDescription(
-                  event.target.value
-                )
-              }
-              placeholder="Describe this add-on..."
-              className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 resize-none"
-            />
-          </Field>
-
-          <div className="grid gap-5 sm:grid-cols-2">
-            <Field label="Price">
+        {/* Modal Body */}
+        <div className="max-h-[70vh] overflow-y-auto p-5 sm:max-h-none sm:p-8">
+          <div className="space-y-5">
+            <Field label="Name">
               <input
-                type="number"
-                min="0"
-                value={price}
+                value={name}
                 onChange={(event) =>
-                  setPrice(
-                    event.target.value
-                  )
+                  setName(event.target.value)
                 }
-                placeholder="500"
+                placeholder="Extra Chair"
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
               />
             </Field>
 
-            <Field label="Maximum Quantity">
-              <input
-                type="number"
-                min="1"
-                value={maxQuantity}
+            <Field label="Description">
+              <textarea
+                rows={3}
+                value={description}
                 onChange={(event) =>
-                  setMaxQuantity(
+                  setDescription(
                     event.target.value
                   )
                 }
-                className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+                placeholder="Describe this add-on..."
+                className="w-full resize-none rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
               />
+            </Field>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Field label="Price">
+                <input
+                  type="number"
+                  min="0"
+                  value={price}
+                  onChange={(event) =>
+                    setPrice(
+                      event.target.value
+                    )
+                  }
+                  placeholder="500"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+                />
+              </Field>
+
+              <Field label="Maximum Quantity">
+                <input
+                  type="number"
+                  min="1"
+                  value={maxQuantity}
+                  onChange={(event) =>
+                    setMaxQuantity(
+                      event.target.value
+                    )
+                  }
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+                />
+              </Field>
+            </div>
+
+            <Field label="Category">
+              <select
+                value={category}
+                onChange={(event) =>
+                  setCategory(
+                    event.target.value
+                  )
+                }
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+              >
+                {categories.map((item) => (
+                  <option
+                    key={item}
+                    value={item}
+                  >
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <Field label="Status">
+              <select
+                value={status}
+                onChange={(event) =>
+                  setStatus(
+                    event.target.value
+                  )
+                }
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
+              >
+                <option value="active">
+                  Active
+                </option>
+
+                <option value="inactive">
+                  Inactive
+                </option>
+              </select>
             </Field>
           </div>
 
-          <Field label="Category">
-            <select
-              value={category}
-              onChange={(event) =>
-                setCategory(
-                  event.target.value
-                )
-              }
-              className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
-            >
-              {categories.map((item) => (
-                <option
-                  key={item}
-                  value={item}
-                >
-                  {item}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <Field label="Status">
-            <select
-              value={status}
-              onChange={(event) =>
-                setStatus(
-                  event.target.value
-                )
-              }
-              className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
-            >
-              <option value="active">
-                Active
-              </option>
-
-              <option value="inactive">
-                Inactive
-              </option>
-            </select>
-          </Field>
+          {/* Error */}
+          {error && (
+            <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
         </div>
 
-        {error && (
-          <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
+        {/* Modal Footer */}
+        <div className="border-t border-slate-100 bg-slate-50 p-4 sm:p-6">
+          <div className="flex flex-col-reverse gap-3 sm:flex-row">
+            <button
+              onClick={onClose}
+              disabled={saving}
+              className="w-full rounded-xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50 sm:flex-1"
+            >
+              Cancel
+            </button>
+
+            <button
+              onClick={save}
+              disabled={saving}
+              className="w-full rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:opacity-50 sm:flex-1"
+            >
+              {saving
+                ? "Saving..."
+                : editing
+                ? "Save Changes"
+                : "Create Add-on"}
+            </button>
           </div>
-        )}
-
-        <div className="mt-7 flex gap-3">
-          <button
-            onClick={onClose}
-            disabled={saving}
-            className="flex-1 rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700"
-          >
-            Cancel
-          </button>
-
-          <button
-            onClick={save}
-            disabled={saving}
-            className="flex-1 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-50"
-          >
-            {saving
-              ? "Saving..."
-              : editing
-              ? "Save Changes"
-              : "Create Add-on"}
-          </button>
         </div>
       </div>
     </div>
@@ -613,12 +703,12 @@ function Field({ label, children }) {
 
 function StatCard({ label, value }) {
   return (
-    <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200">
-      <p className="text-sm font-medium text-slate-500">
+    <div className="rounded-xl bg-white p-3 shadow-sm ring-1 ring-slate-200 sm:rounded-2xl sm:p-5">
+      <p className="truncate text-[11px] font-medium text-slate-500 sm:text-sm">
         {label}
       </p>
 
-      <p className="mt-3 text-3xl font-bold text-slate-900">
+      <p className="mt-2 text-2xl font-bold text-slate-900 sm:mt-3 sm:text-3xl">
         {value}
       </p>
     </div>

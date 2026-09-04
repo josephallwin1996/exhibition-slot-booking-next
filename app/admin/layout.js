@@ -78,15 +78,17 @@ function AuthenticatedAdminLayout({
             href="/admin/dashboard"
             className="flex items-center gap-3"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-950 text-white">
-              <span className="text-sm font-bold">
-                E
-              </span>
+            <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-white">
+              <img
+                src="/logo.png"
+                alt="Exhibition Logo"
+                className="h-full w-full object-contain"
+              />
             </div>
 
             <div className="hidden sm:block">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-600">
-                Exhibition
+                Yarntree Exhibition
               </p>
 
               <p className="text-sm font-bold text-slate-900">

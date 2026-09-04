@@ -319,9 +319,9 @@ export default function CategoriesPage() {
         <div className="mb-6">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-600">
+              {/* <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-amber-600">
                 Exhibition Admin
-              </p>
+              </p> */}
 
               <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
                 Categories

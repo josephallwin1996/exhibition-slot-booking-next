@@ -122,9 +122,9 @@ export default function AdminDashboard() {
         ====================================================== */}
 
         <div className="mb-5 sm:mb-7">
-          <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-600 sm:text-xs">
+          {/* <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-amber-600 sm:text-xs">
             Exhibition Admin
-          </p>
+          </p> */}
 
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
             Dashboard

@@ -1,6 +1,209 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+
+/*
+ * ============================================================
+ * PHYSICAL STALL LAYOUT
+ * ============================================================
+ *
+ * IMPORTANT:
+ * This mapping is the physical hall drawing.
+ *
+ * Do NOT use database row/column values for visual positioning.
+ *
+ * The database still controls:
+ * - slot number
+ * - price
+ * - category
+ * - status
+ * - notes
+ *
+ * This mapping controls ONLY the physical position.
+ */
+
+const STALL_LAYOUT = {
+  // -------------------------------------------------
+  // BOTTOM ROW
+  // 5 4 3 2 1       GAP       7 8 9 10 11
+  // -------------------------------------------------
+
+  5: { x: 18.5, y: 80.0, w: 5.0, h: 8.0 },
+  4: { x: 23.5, y: 80.0, w: 5.0, h: 8.0 },
+  3: { x: 28.5, y: 80.0, w: 5.0, h: 8.0 },
+  2: { x: 33.5, y: 80.0, w: 5.0, h: 8.0 },
+  1: { x: 38.5, y: 80.0, w: 5.0, h: 8.0 },
+
+  7: { x: 53.5, y: 80.0, w: 5.0, h: 8.0 },
+  8: { x: 58.5, y: 80.0, w: 5.0, h: 8.0 },
+  9: { x: 63.5, y: 80.0, w: 5.0, h: 8.0 },
+  10: { x: 68.5, y: 80.0, w: 5.0, h: 8.0 },
+  11: { x: 73.5, y: 80.0, w: 5.0, h: 8.0 },
+
+  // -------------------------------------------------
+  // LOWER CENTRAL ROW
+  // 12 13 14 15 16 17 18 19 20 21
+  // -------------------------------------------------
+
+  12: { x: 18.5, y: 65.8, w: 5.0, h: 8.0 },
+  13: { x: 23.5, y: 65.8, w: 5.0, h: 8.0 },
+  14: { x: 28.5, y: 65.8, w: 5.0, h: 8.0 },
+  15: { x: 33.5, y: 65.8, w: 5.0, h: 8.0 },
+  16: { x: 38.5, y: 65.8, w: 5.0, h: 8.0 },
+  17: { x: 43.5, y: 65.8, w: 5.0, h: 8.0 },
+  18: { x: 48.5, y: 65.8, w: 5.0, h: 8.0 },
+  19: { x: 53.5, y: 65.8, w: 5.0, h: 8.0 },
+  20: { x: 58.5, y: 65.8, w: 5.0, h: 8.0 },
+  21: { x: 63.5, y: 65.8, w: 5.0, h: 8.0 },
+
+  // -------------------------------------------------
+  // LOWER-LEFT STANDALONE
+  // -------------------------------------------------
+
+  6: {
+    x: 9.0,
+    y: 65.0,
+    w: 5.0,
+    h: 8.0,
+    vertical: true,
+  },
+
+  // -------------------------------------------------
+  // LOWER-RIGHT STANDALONE
+  // -------------------------------------------------
+
+  22: {
+    x: 75.0,
+    y: 65.0,
+    w: 5.0,
+    h: 8.0,
+    vertical: true,
+  },
+
+  // -------------------------------------------------
+  // CENTRAL UPPER ROW
+  // 32 31 30 29 28 27 26 25 24 23
+  // -------------------------------------------------
+
+  32: { x: 19.0, y: 49.0, w: 5.0, h: 8.0 },
+  31: { x: 24.0, y: 49.0, w: 5.0, h: 8.0 },
+  30: { x: 29.0, y: 49.0, w: 5.0, h: 8.0 },
+  29: { x: 34.0, y: 49.0, w: 5.0, h: 8.0 },
+  28: { x: 39.0, y: 49.0, w: 5.0, h: 8.0 },
+  27: { x: 44.0, y: 49.0, w: 5.0, h: 8.0 },
+  26: { x: 49.0, y: 49.0, w: 5.0, h: 8.0 },
+  25: { x: 54.0, y: 49.0, w: 5.0, h: 8.0 },
+  24: { x: 59.0, y: 49.0, w: 5.0, h: 8.0 },
+  23: { x: 64.0, y: 49.0, w: 5.0, h: 8.0 },
+
+  // -------------------------------------------------
+  // LEFT WALL
+  // -------------------------------------------------
+
+  36: {
+    x: 4.0,
+    y: 18.0,
+    w: 5.0,
+    h: 8.0,
+    vertical: true,
+  },
+
+  35: {
+    x: 4.0,
+    y: 27.0,
+    w: 5.0,
+    h: 8.0,
+    vertical: true,
+  },
+
+  34: {
+    x: 4.0,
+    y: 36.0,
+    w: 5.0,
+    h: 8.0,
+    vertical: true,
+  },
+
+  33: {
+    x: 4.0,
+    y: 45.0,
+    w: 5.0,
+    h: 8.0,
+    vertical: true,
+  },
+
+  // -------------------------------------------------
+  // UPPER CENTRAL ROW
+  // 48 47 46 45 44 43 42 41 40 39 38 37
+  // -------------------------------------------------
+
+  48: { x: 15.0, y: 28.0, w: 5.0, h: 8.0 },
+  47: { x: 20.0, y: 28.0, w: 5.0, h: 8.0 },
+  46: { x: 25.0, y: 28.0, w: 5.0, h: 8.0 },
+  45: { x: 30.0, y: 28.0, w: 5.0, h: 8.0 },
+  44: { x: 35.0, y: 28.0, w: 5.0, h: 8.0 },
+  43: { x: 40.0, y: 28.0, w: 5.0, h: 8.0 },
+  42: { x: 45.0, y: 28.0, w: 5.0, h: 8.0 },
+  41: { x: 50.0, y: 28.0, w: 5.0, h: 8.0 },
+  40: { x: 55.0, y: 28.0, w: 5.0, h: 8.0 },
+  39: { x: 60.0, y: 28.0, w: 5.0, h: 8.0 },
+  38: { x: 65.0, y: 28.0, w: 5.0, h: 8.0 },
+  37: { x: 70.0, y: 28.0, w: 5.0, h: 8.0 },
+
+  // -------------------------------------------------
+  // TOP ROW
+  // 49 50 51 52 53 54 55 56 57 58 59 60
+  // -------------------------------------------------
+
+  49: { x: 14.0, y: 12.5, w: 5.0, h: 8.0 },
+  50: { x: 19.0, y: 12.5, w: 5.0, h: 8.0 },
+  51: { x: 24.0, y: 12.5, w: 5.0, h: 8.0 },
+  52: { x: 29.0, y: 12.5, w: 5.0, h: 8.0 },
+  53: { x: 34.0, y: 12.5, w: 5.0, h: 8.0 },
+  54: { x: 39.0, y: 12.5, w: 5.0, h: 8.0 },
+  55: { x: 44.0, y: 12.5, w: 5.0, h: 8.0 },
+  56: { x: 49.0, y: 12.5, w: 5.0, h: 8.0 },
+  57: { x: 54.0, y: 12.5, w: 5.0, h: 8.0 },
+  58: { x: 59.0, y: 12.5, w: 5.0, h: 8.0 },
+  59: { x: 64.0, y: 12.5, w: 5.0, h: 8.0 },
+  60: { x: 69.0, y: 12.5, w: 5.0, h: 8.0 },
+
+  // -------------------------------------------------
+  // RIGHT WALL
+  // -------------------------------------------------
+
+  64: {
+    x: 84.0,
+    y: 15.0,
+    w: 5.0,
+    h: 8.0,
+    vertical: true,
+  },
+
+  63: {
+    x: 84.0,
+    y: 25.0,
+    w: 5.0,
+    h: 8.0,
+    vertical: true,
+  },
+
+  62: {
+    x: 84.0,
+    y: 35.0,
+    w: 5.0,
+    h: 8.0,
+    vertical: true,
+  },
+
+  61: {
+    x: 84.0,
+    y: 45.0,
+    w: 5.0,
+    h: 8.0,
+    vertical: true,
+  },
+};
 
 const statuses = [
   "available",
@@ -13,11 +216,6 @@ const statusStyles = {
     card: "border-green-300 bg-green-50 text-green-800",
     dot: "bg-green-500",
   },
-
-  // booked: {
-  //   card: "border-blue-200 bg-blue-50 text-blue-800",
-  //   dot: "bg-blue-500",
-  // },
 
   booked: {
     card: "border-red-200 bg-red-50 text-red-800",
@@ -121,88 +319,52 @@ export default function SlotsPage() {
     loadSlots();
   }
 
-  const visibleSlots = useMemo(() => {
-    if (!search.trim()) {
-      return slots;
-    }
-
-    const query = search.trim().toLowerCase();
-
-    return slots.filter((slot) =>
-      String(slot.slotNumber)
-        .toLowerCase()
-        .includes(query)
-    );
-  }, [slots, search]);
-
   /*
-   * Group stalls by physical row.
+   * Search is intentionally applied on the client too.
+   *
+   * The physical map still stays in the exact same position.
+   * Slots that don't match the search simply disappear.
    */
-  const rows = useMemo(() => {
-    const grouped = {};
+  const visibleSlots = search.trim()
+    ? slots.filter((slot) =>
+        String(slot.slotNumber)
+          .toLowerCase()
+          .includes(search.trim().toLowerCase())
+      )
+    : slots;
 
-    visibleSlots.forEach((slot) => {
-      const row = Number(slot.row) || 1;
-
-      if (!grouped[row]) {
-        grouped[row] = [];
-      }
-
-      grouped[row].push(slot);
-    });
-
-    Object.values(grouped).forEach((rowSlots) => {
-      rowSlots.sort((a, b) => {
-        const columnDifference =
-          Number(a.column || 0) -
-          Number(b.column || 0);
-
-        if (columnDifference !== 0) {
-          return columnDifference;
-        }
-
-        return String(a.slotNumber).localeCompare(
-          String(b.slotNumber),
-          undefined,
-          {
-            numeric: true,
-          }
-        );
-      });
-    });
-
-    return grouped;
-  }, [visibleSlots]);
-
-  const rowNumbers = Object.keys(rows).sort(
-    (a, b) => Number(a) - Number(b)
+  const slotMap = new Map(
+    visibleSlots.map((slot) => [
+      String(slot.slotNumber),
+      slot,
+    ])
   );
+
+  function getSlot(number) {
+    return slotMap.get(String(number));
+  }
 
   return (
     <main className="min-h-screen bg-slate-100">
-
       {/* =====================================================
           HEADER
       ====================================================== */}
 
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
-
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-amber-600 sm:text-xs">
+              {/* <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-amber-600 sm:text-xs">
                 Exhibition Admin
-              </p>
+              </p> */}
 
               <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
                 Slot Management
               </h1>
 
               <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500 sm:mt-2 sm:text-sm sm:leading-6">
-                Manage exhibition stalls,
-                categories, pricing and
-                availability.
+                Manage exhibition stalls, categories,
+                pricing and availability.
               </p>
             </div>
 
@@ -212,19 +374,16 @@ export default function SlotsPage() {
               </span>{" "}
               physical stalls
             </div>
-
           </div>
         </div>
       </header>
 
       <section className="mx-auto max-w-7xl px-3 py-5 sm:px-6 sm:py-8 lg:px-8">
-
         {/* =====================================================
             STATS
         ====================================================== */}
 
         <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-
           <StatCard
             label="Total Slots"
             value={stats.total}
@@ -244,7 +403,6 @@ export default function SlotsPage() {
             label="Unavailable"
             value={stats.unavailable}
           />
-
         </div>
 
         {/* =====================================================
@@ -252,9 +410,7 @@ export default function SlotsPage() {
         ====================================================== */}
 
         <div className="mt-5 rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:mt-8 sm:p-6">
-
           <div className="flex flex-col gap-4">
-
             <div>
               <h2 className="text-base font-bold text-slate-900 sm:text-lg">
                 Exhibition Floor
@@ -266,7 +422,6 @@ export default function SlotsPage() {
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-
               {/* Search */}
 
               <form
@@ -336,7 +491,6 @@ export default function SlotsPage() {
                   </option>
                 ))}
               </select>
-
             </div>
           </div>
         </div>
@@ -356,13 +510,10 @@ export default function SlotsPage() {
         ====================================================== */}
 
         <div className="mt-5 overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-slate-200 sm:mt-6 sm:rounded-3xl">
-
           {/* Map Header */}
 
           <div className="border-b border-slate-200 bg-slate-950 px-4 py-5 text-white sm:px-7 sm:py-6">
-
             <div className="flex flex-col gap-4">
-
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-amber-400 sm:text-xs">
                   Exhibition 2026
@@ -380,7 +531,6 @@ export default function SlotsPage() {
               {/* Legend */}
 
               <div className="flex flex-wrap gap-x-4 gap-y-2 text-[10px] text-slate-300 sm:gap-x-5 sm:text-xs">
-
                 <Legend
                   dot="bg-green-500"
                   label="Available"
@@ -400,9 +550,7 @@ export default function SlotsPage() {
                   dot="bg-amber-400"
                   label="Unassigned"
                 />
-
               </div>
-
             </div>
           </div>
 
@@ -413,19 +561,16 @@ export default function SlotsPage() {
           {loading ? (
             <div className="flex min-h-[400px] items-center justify-center sm:min-h-[500px]">
               <div className="text-center">
-
                 <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-slate-900 sm:h-9 sm:w-9" />
 
                 <p className="mt-4 text-xs text-slate-500 sm:text-sm">
                   Loading exhibition floor...
                 </p>
-
               </div>
             </div>
           ) : visibleSlots.length === 0 ? (
             <div className="flex min-h-[350px] items-center justify-center px-6">
               <div className="text-center">
-
                 <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-400">
                   —
                 </div>
@@ -437,137 +582,181 @@ export default function SlotsPage() {
                 <p className="mt-1 text-xs text-slate-500 sm:text-sm">
                   Try changing your search or filters.
                 </p>
-
               </div>
             </div>
           ) : (
             /*
-             * IMPORTANT:
-             *
              * Only this wrapper scrolls horizontally.
-             * The rest of the page remains responsive.
+             * The rest of the dashboard remains responsive.
              */
             <div className="overflow-x-auto overscroll-x-contain">
-
-              <div className="mx-auto w-max min-w-full px-3 py-5 sm:px-8 sm:py-8">
-
+              <div className="mx-auto min-w-[1050px] max-w-[1500px] px-3 py-5 sm:px-8 sm:py-8">
                 {/* Exit */}
 
                 <div className="mx-auto mb-6 w-40 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 px-4 py-2.5 text-center sm:mb-8 sm:w-56 sm:px-5 sm:py-3">
-
                   <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500">
                     Exit
                   </p>
-
                 </div>
 
-                {/* Physical floor */}
+                {/* =================================================
+                    PHYSICAL HALL
+                ================================================== */}
 
-                <div className="rounded-2xl border-2 border-slate-200 bg-slate-50 p-3 sm:rounded-3xl sm:border-4 sm:p-7">
+                <div className="relative overflow-hidden rounded-2xl border-4 border-double border-slate-400 bg-slate-50 sm:rounded-3xl">
+                  {/* Hall inner map */}
 
-                  {/* Walkway */}
+                  <div
+                    className="relative w-full overflow-hidden rounded-xl bg-white"
+                    style={{
+                      aspectRatio: "1600 / 900",
+                    }}
+                  >
+                    {/* ------------------------------------------
+                        UPPER GREY STRUCTURE
+                    ------------------------------------------- */}
 
-                  <div className="mb-5 flex items-center gap-3 sm:mb-7 sm:gap-4">
+                    <div
+                      className="absolute rounded-sm bg-slate-300"
+                      style={{
+                        left: "14%",
+                        top: "5%",
+                        width: "60%",
+                        height: "10%",
+                      }}
+                    />
 
-                    <div className="h-px w-20 bg-slate-200 sm:w-32" />
+                    {/* ------------------------------------------
+                        UPPER CENTRAL GREY STRUCTURE
+                    ------------------------------------------- */}
 
-                    <span className="whitespace-nowrap rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.2em] text-slate-500 sm:px-4 sm:py-2 sm:text-[10px] sm:tracking-[0.25em]">
-                      Main Walkway
-                    </span>
+                    <div
+                      className="absolute rounded-sm bg-slate-300"
+                      style={{
+                        left: "15%",
+                        top: "34%",
+                        width: "60%",
+                        height: "9%",
+                      }}
+                    />
 
-                    <div className="h-px w-20 bg-slate-200 sm:w-32" />
+                    {/* ------------------------------------------
+                        LARGE LOWER CENTRAL STRUCTURE
+                    ------------------------------------------- */}
 
-                  </div>
+                    <div
+                      className="absolute rounded-sm bg-slate-300"
+                      style={{
+                        left: "19%",
+                        top: "54%",
+                        width: "50%",
+                        height: "14%",
+                      }}
+                    />
 
-                  {/* Rows */}
+                    {/* ------------------------------------------
+                        STRUCTURAL SUPPORTS
+                    ------------------------------------------- */}
 
-                  <div className="space-y-2 sm:space-y-3">
+                    {[21, 32, 43, 54, 65].map(
+                      (left) => (
+                        <div
+                          key={left}
+                          className="absolute h-[3%] w-[1%] rounded-sm bg-slate-400"
+                          style={{
+                            left: `${left}%`,
+                            top: "53%",
+                          }}
+                        />
+                      )
+                    )}
 
-                    {rowNumbers.map(
-                      (rowNumber) => {
-                        const rowSlots =
-                          rows[rowNumber];
+                    {/* ------------------------------------------
+                        ENTRY
+                    ------------------------------------------- */}
 
-                        const maxColumn =
-                          Math.max(
-                            ...rowSlots.map(
-                              (slot) =>
-                                Number(
-                                  slot.column
-                                ) || 1
-                            ),
-                            1
-                          );
+                    <div
+                      className="absolute bottom-0 left-1/2 -translate-x-1/2"
+                      style={{
+                        width: "9%",
+                      }}
+                    >
+                      <div className="flex h-8 items-end justify-center">
+                        <div className="h-5 w-10 border-x border-t border-slate-700 bg-white" />
+                      </div>
+
+                      <p className="mt-1 text-center text-[9px] font-semibold text-slate-600">
+                        ENTRY/EXIT
+                      </p>
+                    </div>
+
+                    {/* ------------------------------------------
+                        WALKING ARROWS
+                    ------------------------------------------- */}
+
+                    <div className="pointer-events-none absolute left-[30%] top-[22%] text-xl text-slate-500">
+                      →
+                    </div>
+
+                    <div className="pointer-events-none absolute left-[51%] top-[22%] text-xl text-slate-500">
+                      →
+                    </div>
+
+                    <div className="pointer-events-none absolute left-[67%] top-[22%] text-xl text-slate-500">
+                      →
+                    </div>
+
+                    <div className="pointer-events-none absolute left-[22%] top-[44%] text-xl text-slate-500">
+                      ←
+                    </div>
+
+                    <div className="pointer-events-none absolute left-[43%] top-[44%] text-xl text-slate-500">
+                      ←
+                    </div>
+
+                    <div className="pointer-events-none absolute left-[65%] top-[44%] text-xl text-slate-500">
+                      ←
+                    </div>
+
+                    <div className="pointer-events-none absolute left-[32%] top-[75%] text-xl text-slate-500">
+                      →
+                    </div>
+
+                    <div className="pointer-events-none absolute left-[55%] top-[75%] text-xl text-slate-500">
+                      →
+                    </div>
+
+                    {/* ------------------------------------------
+                        STALLS
+                    ------------------------------------------- */}
+
+                    {Object.keys(STALL_LAYOUT).map(
+                      (number) => {
+                        const slot = getSlot(number);
+
+                        if (!slot) {
+                          return null;
+                        }
+
+                        const layout =
+                          STALL_LAYOUT[number];
 
                         return (
-                          <div
-                            key={rowNumber}
-                            className="grid gap-2 sm:gap-3"
-                            style={{
-                              gridTemplateColumns: `repeat(${maxColumn}, minmax(68px, 68px))`,
-                            }}
-                          >
-                            {Array.from({
-                              length: maxColumn,
-                            }).map(
-                              (_, index) => {
-                                const column =
-                                  index + 1;
-
-                                const slot =
-                                  rowSlots.find(
-                                    (item) =>
-                                      Number(
-                                        item.column
-                                      ) ===
-                                      column
-                                  );
-
-                                if (!slot) {
-                                  return (
-                                    <div
-                                      key={`empty-${rowNumber}-${column}`}
-                                      className="h-[76px] rounded-xl border border-transparent sm:h-[82px]"
-                                    />
-                                  );
-                                }
-
-                                return (
-                                  <SlotCard
-                                    key={slot._id}
-                                    slot={slot}
-                                    onClick={() =>
-                                      setEditingSlot(
-                                        slot
-                                      )
-                                    }
-                                  />
-                                );
-                              }
-                            )}
-                          </div>
+                          <AdminStall
+                            key={String(slot._id)}
+                            slot={slot}
+                            layout={layout}
+                            onClick={() =>
+                              setEditingSlot(
+                                slot
+                              )
+                            }
+                          />
                         );
                       }
                     )}
-
                   </div>
-
-                  {/* Entrance */}
-
-                  <div className="mt-6 flex justify-center sm:mt-8">
-
-                    <div className="rounded-xl border-2 border-dashed border-green-300 bg-green-50 px-8 py-2.5 text-center sm:px-10 sm:py-3">
-
-                      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-green-700">
-                        Entrance
-                      </p>
-
-                    </div>
-
-                  </div>
-
                 </div>
-
               </div>
             </div>
           )}
@@ -577,9 +766,7 @@ export default function SlotsPage() {
           {!loading &&
             visibleSlots.length > 0 && (
               <div className="border-t border-slate-200 bg-white px-4 py-3 sm:px-7 sm:py-4">
-
                 <div className="flex flex-col gap-1 text-[11px] text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:text-xs">
-
                   <span>
                     Showing{" "}
                     <strong className="text-slate-700">
@@ -592,12 +779,9 @@ export default function SlotsPage() {
                     Swipe left/right on mobile to
                     view the floor
                   </span>
-
                 </div>
-
               </div>
             )}
-
         </div>
       </section>
 
@@ -620,81 +804,64 @@ export default function SlotsPage() {
           }}
         />
       )}
-
     </main>
   );
 }
 
 /* ============================================================
-   SLOT CARD
+   ADMIN STALL
 ============================================================ */
 
-function SlotCard({
+function AdminStall({
   slot,
+  layout,
   onClick,
 }) {
   const isUnassigned =
     !slot.category;
 
-  const style =
-    isUnassigned
-      ? {
-          card:
-            "border-amber-300 bg-amber-50 text-amber-800",
-          dot: "bg-amber-500",
-        }
-      : statusStyles[
-          slot.status
-        ] || {
-          card:
-            "border-slate-200 bg-slate-100 text-slate-700",
-          dot: "bg-slate-400",
-        };
+  const style = isUnassigned
+    ? {
+        card:
+          "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100 hover:border-amber-400",
+        dot: "bg-amber-500",
+      }
+    : statusStyles[slot.status] || {
+        card:
+          "border-slate-200 bg-slate-100 text-slate-700",
+        dot: "bg-slate-400",
+      };
 
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={`Edit stall ${slot.slotNumber}`}
-      className={`group relative flex h-[76px] w-[68px] flex-col items-center justify-center rounded-xl border px-1.5 text-center shadow-sm transition duration-200 hover:-translate-y-0.5 hover:border-amber-400 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-400/60 sm:h-[82px] sm:w-[72px] ${style.card}`}
+      className={`absolute flex items-center justify-center rounded-lg border-2 shadow-sm transition-all duration-150 hover:z-20 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-400/60 ${style.card}`}
+      style={{
+        left: `${layout.x}%`,
+        top: `${layout.y}%`,
+        width: `${layout.w}%`,
+        height: `${layout.h}%`,
+      }}
     >
+      {/* Stall number */}
 
-      {/* Status */}
+      <span className="text-sm font-extrabold leading-none sm:text-base">
+        {String(slot.slotNumber).padStart(2, "0")}
+      </span>
+
+      {/* Status dot */}
 
       <span
-        className={`absolute right-2 top-2 h-2 w-2 rounded-full ${style.dot}`}
+        className={`absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full sm:right-2 sm:top-2 sm:h-2 sm:w-2 ${style.dot}`}
       />
 
-      {/* Number */}
+      {/* Desktop hover information */}
 
-      <span className="text-sm font-bold tracking-wide sm:text-base">
-        {String(
-          slot.slotNumber
-        ).padStart(2, "0")}
+      <span className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 hidden w-40 -translate-x-1/2 rounded-xl bg-slate-950 px-3 py-2 text-left text-[10px] text-white shadow-xl group-hover:block">
+        Stall {slot.slotNumber}
       </span>
-
-      {/* Category */}
-
-      <span className="mt-1 max-w-[62px] truncate text-[8px] font-semibold uppercase tracking-wide opacity-70 sm:max-w-[66px] sm:text-[9px]">
-        {slot.category?.name ||
-          "Unassigned"}
-      </span>
-
-      {/* Price */}
-
-      <span className="mt-1 text-[8px] opacity-60 sm:text-[9px]">
-        ₹
-        {Number(
-          slot.price || 0
-        ).toLocaleString("en-IN")}
-      </span>
-
-      {/* Price */}
-
-      <span className="mt-1 text-[8px] opacity-60 sm:text-[9px]">
-        Size: 6 X 6 ft
-      </span>
-
     </button>
   );
 }
@@ -740,9 +907,7 @@ function EditSlotModal({
       Number(price);
 
     if (
-      Number.isNaN(
-        numericPrice
-      ) ||
+      Number.isNaN(numericPrice) ||
       numericPrice < 0
     ) {
       setError(
@@ -810,9 +975,7 @@ function EditSlotModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 px-0 py-0 backdrop-blur-sm sm:items-center sm:px-4 sm:py-6">
-
       <div className="max-h-[94vh] w-full overflow-y-auto rounded-t-3xl bg-white p-5 shadow-2xl ring-1 ring-slate-200 sm:max-h-[90vh] sm:max-w-lg sm:rounded-3xl sm:p-8">
-
         {/* Mobile handle */}
 
         <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-slate-200 sm:hidden" />
@@ -820,7 +983,6 @@ function EditSlotModal({
         {/* Header */}
 
         <div className="flex items-start justify-between">
-
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-600">
               Manage Stall
@@ -849,13 +1011,11 @@ function EditSlotModal({
           >
             ×
           </button>
-
         </div>
 
         {/* Form */}
 
         <div className="mt-6 space-y-5 sm:mt-7">
-
           {/* Category */}
 
           <div>
@@ -903,7 +1063,6 @@ function EditSlotModal({
             </label>
 
             <div className="relative">
-
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">
                 ₹
               </span>
@@ -919,7 +1078,6 @@ function EditSlotModal({
                 }
                 className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 pl-9 text-slate-900 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
               />
-
             </div>
           </div>
 
@@ -980,7 +1138,6 @@ function EditSlotModal({
               className="w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10"
             />
           </div>
-
         </div>
 
         {/* Error */}
@@ -994,7 +1151,6 @@ function EditSlotModal({
         {/* Actions */}
 
         <div className="mt-6 flex flex-col-reverse gap-3 sm:mt-7 sm:flex-row">
-
           <button
             type="button"
             onClick={onClose}
@@ -1014,9 +1170,7 @@ function EditSlotModal({
               ? "Saving..."
               : "Save Changes"}
           </button>
-
         </div>
-
       </div>
     </div>
   );
@@ -1032,7 +1186,6 @@ function StatCard({
 }) {
   return (
     <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200 sm:p-5">
-
       <p className="text-xs font-medium text-slate-500 sm:text-sm">
         {label}
       </p>
@@ -1040,7 +1193,6 @@ function StatCard({
       <p className="mt-2 text-2xl font-bold text-slate-900 sm:mt-3 sm:text-3xl">
         {value}
       </p>
-
     </div>
   );
 }
@@ -1055,13 +1207,11 @@ function Legend({
 }) {
   return (
     <div className="flex items-center gap-1.5">
-
       <span
         className={`h-2 w-2 rounded-full ${dot}`}
       />
 
       <span>{label}</span>
-
     </div>
   );
 }
