@@ -820,6 +820,10 @@ function AdminStall({
   const isUnassigned =
     !slot.category;
 
+  const categoryName = isUnassigned
+    ? ""
+    : slot.category.name;
+
   const style = isUnassigned
     ? {
         card:
@@ -837,7 +841,7 @@ function AdminStall({
       type="button"
       onClick={onClick}
       aria-label={`Edit stall ${slot.slotNumber}`}
-      className={`absolute flex items-center justify-center rounded-lg border-2 shadow-sm transition-all duration-150 hover:z-20 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-400/60 ${style.card}`}
+      className={`absolute flex flex-col items-center justify-center rounded-lg border-2 shadow-sm transition-all duration-150 hover:z-20 hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-400/60 ${style.card}`}
       style={{
         left: `${layout.x}%`,
         top: `${layout.y}%`,
@@ -846,19 +850,23 @@ function AdminStall({
       }}
     >
       {/* Stall number */}
-
       <span className="text-sm font-extrabold leading-none sm:text-base">
         {String(slot.slotNumber).padStart(2, "0")}
       </span>
 
-      {/* Status dot */}
+      {/* Category */}
+      {categoryName && (
+        <span className="mt-1 max-w-[90%] truncate text-[7px] font-semibold leading-none sm:text-[8px]">
+          {categoryName}
+        </span>
+      )}
 
+      {/* Status dot */}
       <span
         className={`absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full sm:right-2 sm:top-2 sm:h-2 sm:w-2 ${style.dot}`}
       />
 
       {/* Desktop hover information */}
-
       <span className="pointer-events-none absolute left-1/2 top-full z-30 mt-2 hidden w-40 -translate-x-1/2 rounded-xl bg-slate-950 px-3 py-2 text-left text-[10px] text-white shadow-xl group-hover:block">
         Stall {slot.slotNumber}
       </span>
