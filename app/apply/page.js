@@ -328,7 +328,7 @@ export default function ApplyPage() {
               </p>
 
               <p className="mt-1 font-serif text-sm text-[#42151c] sm:text-base">
-                Thrissur
+                Anchery Chira Thrissur
               </p>
             </div>
           </div>
@@ -759,7 +759,7 @@ export default function ApplyPage() {
 
           <p className="mt-2 text-[9px] text-[#806d64]">
             November 20 & 21 · Chakolas Pavilion ·
-            Thrissur
+            Anchery Chira Thrissur
           </p>
         </div>
       </footer>
