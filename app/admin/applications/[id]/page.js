@@ -60,6 +60,11 @@ export default function ApplicationDetailsPage({
 
         const data =
           await response.json();
+       
+        if (response.status === 401) {
+          window.location.href = "/admin/login";
+          return;
+        }
 
         if (!response.ok || !data.success) {
           throw new Error(

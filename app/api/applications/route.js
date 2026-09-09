@@ -389,7 +389,7 @@ export async function POST(request) {
                 parameters: [
                   {
                     type: "text",
-                    text: `https://exhibition-slot-booking-next.vercel.app/admin/login`,
+                    text: applicationReference,
                   },
                 ],
               },

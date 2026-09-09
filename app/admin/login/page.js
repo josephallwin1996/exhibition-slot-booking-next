@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -91,10 +92,18 @@ export default function AdminLoginPage() {
         {/* Brand */}
         <div className="mb-7 text-center sm:mb-8">
 
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#3B302A] shadow-lg shadow-[#3B302A]/15 sm:h-16 sm:w-16">
-            <span className="text-xl font-bold tracking-tight text-[#F4C878] sm:text-2xl">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#fdfdfd] shadow-lg shadow-[#3B302A]/15 sm:h-16 sm:w-16">
+            {/* <span className="text-xl font-bold tracking-tight text-[#F4C878] sm:text-2xl">
               E
-            </span>
+            </span> */}
+            <Image
+              src="/logo.png"
+              alt="Exhibition Logo"
+              width={75}
+              height={75}
+              loading="eager"
+              //className="relative h-8 w-8 object-contain"
+            />
           </div>
 
           <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#A85D3E] sm:text-xs">
