@@ -201,7 +201,8 @@ export default function HomePage() {
 
           {/* Poster-inspired visual */}
           <div className="relative mx-auto w-full max-w-[520px]">
-            <div className="relative aspect-[0.72] overflow-hidden rounded-[28px] border border-[#a77932]/30 bg-[#eee3d3] shadow-2xl shadow-[#42151c]/10">
+            {/* <div className="relative aspect-[0.72] overflow-hidden rounded-[28px] border border-[#a77932]/30 bg-[#eee3d3] shadow-2xl shadow-[#42151c]/10"> */}
+            <div className="relative aspect-[0.56] overflow-hidden rounded-[28px] border border-[#a77932]/30 bg-[#eee3d3] shadow-2xl shadow-[#42151c]/10 sm:aspect-[0.65] lg:aspect-[0.72]">
               {/* Top greenery */}
               <div className="absolute left-0 right-0 top-0 h-24 bg-gradient-to-b from-[#31432c]/30 to-transparent" />
 
@@ -218,14 +219,15 @@ export default function HomePage() {
               <GoldStar className="right-[9%] top-[67%]" />
 
               {/* Central poster content */}
-              <div className="absolute inset-x-5 top-[15%] text-center sm:inset-x-8">
+              {/* <div className="absolute inset-x-5 top-[15%] text-center sm:inset-x-8"> */}
+                <div className="absolute inset-x-4 top-[12%] text-center sm:inset-x-8 sm:top-[15%]">
                 <Image
                   src="/logo.png"
                   alt="Exhibition Logo"
                   width={65}
                   height={65}
                   loading="eager"
-                  className="mx-auto object-contain"
+                  className="mx-auto h-14 w-14 object-contain sm:h-auto sm:w-auto"
                 />
                 <p className="font-serif text-[13px] font-semibold uppercase tracking-[0.18em] text-[#7d1727] sm:text-sm">
                   Yarntree
@@ -255,13 +257,15 @@ export default function HomePage() {
                   STREET '26
                 </p>
 
-                <p className="mt-6 text-[8px] font-bold uppercase tracking-[0.22em] text-[#7d1727] sm:text-[9px]">
+                <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#7d1727] sm:text-[9px]">
                   Shop · Discover · Celebrate
                 </p>
 
-                <p className="mt-2 font-serif text-xs italic text-[#62524b] sm:text-sm">
+                <p className="mt-2 font-serif text-[13px] italic text-[#62524b] sm:text-sm">
                   A Premium Christmas Shopping Experience
                 </p>
+
+                
 
                 {/* Date */}
                 <div className="mx-auto mt-7 max-w-[300px] rounded-2xl border border-[#a77932]/50 bg-[#f8f1e6]/70 px-4 py-4 backdrop-blur-sm">
@@ -280,11 +284,11 @@ export default function HomePage() {
 
                 {/* Venue */}
                 <div className="mt-5">
-                  <p className="text-[8px] font-bold uppercase tracking-[0.16em] text-[#7d1727]">
+                  <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#7d1727]">
                     Chakolas Pavilion
                   </p>
 
-                  <p className="mt-1 text-[8px] text-[#62524b]">
+                  <p className="mt-1 text-[9px] text-[#62524b]">
                     Anchery Chira Thrissur
                   </p>
                 </div>
