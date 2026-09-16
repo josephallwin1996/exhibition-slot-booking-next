@@ -5,7 +5,7 @@ import Application from "@/models/Application";
 import Slot from "@/models/Slot";
 import Booking from "@/models/Booking";
 
-const RESERVATION_MINUTES = 1;
+const RESERVATION_MINUTES = 5;
 
 export async function POST(
   request,

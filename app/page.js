@@ -218,12 +218,12 @@ export default function HomePage() {
               <GoldStar className="right-[9%] top-[67%]" />
 
               {/* Central poster content */}
-              <div className="absolute inset-x-5 top-[17%] text-center sm:inset-x-8">
+              <div className="absolute inset-x-5 top-[15%] text-center sm:inset-x-8">
                 <Image
                   src="/logo.png"
                   alt="Exhibition Logo"
-                  width={75}
-                  height={75}
+                  width={65}
+                  height={65}
                   loading="eager"
                   className="mx-auto object-contain"
                 />

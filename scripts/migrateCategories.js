@@ -28,7 +28,7 @@ const categories = [
   },
   {
     name: "Shared Stall",
-    slug: "shared",
+    slug: "shared-stall",
     position: 5,
   },
 ];
