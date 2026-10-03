@@ -443,7 +443,7 @@ export default function PaymentPage() {
         <li>
           3. Send the screenshot to:
           <span className="ml-1 font-bold text-white">
-            +91 99999 99999
+            +91 95443 64142
           </span>
         </li>
 
