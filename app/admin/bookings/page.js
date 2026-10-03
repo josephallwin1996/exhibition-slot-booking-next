@@ -195,6 +195,8 @@ export default function AdminBookingsPage() {
     setExporting(false);
   }
 }
+
+
   function handleSearch(event) {
     event.preventDefault();
 
@@ -1293,6 +1295,62 @@ function BookingDrawer({
   booking,
   onClose,
 }) {
+  const isConfirmed = booking.status === "confirmed" || booking.status === "paid" ;
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const handleConfirmBooking = async () => {
+    try {
+      setConfirming(true);
+      setError("");
+
+      const response = await fetch(
+        `/api/admin/bookings/${booking._id}/confirm`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            "Unable to confirm booking."
+        );
+      }
+
+      // Update the current booking immediately
+      // setBooking((prev) => ({
+      //   ...prev,
+      //   status: data.booking.status,
+      //   paymentStatus:
+      //     data.booking.paymentStatus,
+      // }));
+
+      // Optional success message
+      setSuccess(
+        data.message ||
+          "Booking confirmed successfully."
+      );
+    } catch (error) {
+      console.error(
+        "Confirm booking error:",
+        error
+      );
+
+      setError(
+        error.message ||
+          "Unable to confirm booking."
+      );
+    } finally {
+      setConfirming(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50">
 
@@ -1565,6 +1623,22 @@ function BookingDrawer({
 
           <div className="flex flex-col gap-3 sm:flex-row">
 
+            {isConfirmed ? (
+                <span className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
+                  ✓ Booking Confirmed
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleConfirmBooking}
+                  disabled={confirming}
+                  className="rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                {confirming
+                    ? "Confirming..."
+                    : "Confirm Booking"}
+                </button>
+              )}
             {booking.paymentStatus ===
               "paid" && (
               <button

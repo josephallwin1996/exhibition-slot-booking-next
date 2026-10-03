@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import Slot from "../models/Slot.js";
 
-const SLOT_PRICE = 25000;
+const SLOT_PRICE = 18000;
 
 /*
  * Physical exhibition layout.

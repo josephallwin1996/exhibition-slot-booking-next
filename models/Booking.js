@@ -103,6 +103,7 @@ const bookingSchema = new mongoose.Schema(
       enum: [
         "reserved",
         "pending_payment",
+        "payment_submitted",
         "paid",
         "cancelled",
         "expired",

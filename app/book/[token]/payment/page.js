@@ -108,6 +108,43 @@ export default function PaymentPage() {
     }
   }
 
+  async function handlePaymentSubmitted() {
+  try {
+    console.log("heree")
+    const response = await fetch(
+      `/api/booking/${token}/payment-submitted`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(
+        data.message ||
+          "Unable to submit payment status."
+      );
+    }
+
+    router.push(
+      `/book/${token}/completed`
+    );
+  } catch (error) {
+    console.error(
+      "Payment submission error:",
+      error
+    );
+
+    setError(
+      error.message ||
+        "Unable to submit payment status."
+    );
+  }
+}
   async function openCashfreeCheckout(
     order
   ) {
@@ -335,52 +372,146 @@ export default function PaymentPage() {
             </div>
           </div>
 
-          <div className="h-fit rounded-2xl bg-slate-950 p-6 text-white shadow-xl sm:p-8">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-400">
-              Payment
-            </p>
+          {/* Payment */}
+<div className="h-fit rounded-2xl bg-slate-950 p-6 text-white shadow-xl sm:p-8">
+  <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-400">
+    Payment
+  </p>
 
-            <div className="mt-6">
-              <p className="text-sm text-slate-400">
-                Amount payable
-              </p>
+  {/* Amount */}
+  <div className="mt-6">
+    <p className="text-sm text-slate-400">
+      Amount payable
+    </p>
 
-              <p className="mt-2 text-4xl font-bold">
-                ₹
-                {Number(
-                  booking.total
-                ).toLocaleString(
-                  "en-IN"
-                )}
-              </p>
-            </div>
+    <p className="mt-2 text-4xl font-bold">
+      ₹
+      {Number(
+        booking.total
+      ).toLocaleString("en-IN")}
+    </p>
+  </div>
 
-            {error && (
-              <div className="mt-6 rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-200">
-                {error}
-              </div>
-            )}
+  {error && (
+    <div className="mt-6 rounded-xl border border-red-400/30 bg-red-400/10 px-4 py-3 text-sm text-red-200">
+      {error}
+    </div>
+  )}
 
-            <button
-              type="button"
-              onClick={handlePayment}
-              disabled={paying}
-              className="mt-8 w-full rounded-xl bg-white px-6 py-4 text-sm font-bold text-slate-950 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {paying
-                ? "Opening Payment..."
-                : `Pay ₹${Number(
-                    booking.total
-                  ).toLocaleString(
-                    "en-IN"
-                  )}`}
-            </button>
+  {/* -------------------------------------------------- */}
+  {/* TEMPORARY MANUAL PAYMENT                          */}
+  {/* -------------------------------------------------- */}
 
-            <p className="mt-4 text-center text-xs leading-5 text-slate-500">
-              You will be securely redirected to
-              Cashfree's payment window.
-            </p>
-          </div>
+  <div className="mt-8">
+    <p className="text-sm font-semibold text-white">
+      Scan & Pay
+    </p>
+
+    <p className="mt-2 text-xs leading-5 text-slate-400">
+      Scan the QR code below to complete your
+      payment.
+    </p>
+
+    {/* QR Code */}
+    <div className="mt-5 flex justify-center">
+      <div className="rounded-2xl bg-white p-4 shadow-lg">
+        <img
+          src="/payment-qr.png"
+          alt="Payment QR Code"
+          className="h-52 w-52 object-contain sm:h-60 sm:w-60"
+        />
+      </div>
+    </div>
+
+    {/* Payment instructions */}
+    <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-4">
+      <p className="text-sm font-semibold text-white">
+        After completing the payment
+      </p>
+
+      <ol className="mt-3 space-y-2 text-xs leading-5 text-slate-300">
+        <li>
+          1. Complete the payment using the QR
+          code.
+        </li>
+
+        <li>
+          2. Take a screenshot of the successful
+          payment.
+        </li>
+
+        <li>
+          3. Send the screenshot to:
+          <span className="ml-1 font-bold text-white">
+            +91 99999 99999
+          </span>
+        </li>
+
+        <li>
+          4. Mention your booking reference:
+        </li>
+      </ol>
+
+      {/* Booking Reference */}
+      <div className="mt-3 rounded-lg bg-white/10 px-3 py-2 text-center">
+        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
+          Booking Reference
+        </p>
+
+        <p className="mt-1 text-sm font-bold text-amber-400">
+          {booking.bookingReference}
+        </p>
+      </div>
+    </div>
+
+    {/* Completed Payment */}
+    <button
+      type="button"
+      onClick={handlePaymentSubmitted}
+      className="mt-6 w-full rounded-xl bg-white px-6 py-4 text-sm font-bold text-slate-950 transition hover:bg-slate-100"
+    >
+      Completed Payment
+    </button>
+
+    <p className="mt-4 text-center text-xs leading-5 text-slate-500">
+      Your payment will be manually verified by
+      our team before the booking is confirmed.
+    </p>
+  </div>
+
+  {/* -------------------------------------------------- */}
+  {/* TEMPORARY MANUAL PAYMENT END                      */}
+  {/* -------------------------------------------------- */}
+
+
+  {/*
+    =====================================================
+    CASHFREE PAYMENT — TEMPORARILY DISABLED
+    =====================================================
+
+    Keeping this code for the future Cashfree flow.
+
+    <button
+      type="button"
+      onClick={handlePayment}
+      disabled={paying}
+      className="mt-8 w-full rounded-xl bg-white px-6 py-4 text-sm font-bold text-slate-950 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      {paying
+        ? "Opening Payment..."
+        : `Pay ₹${Number(
+            booking.total
+          ).toLocaleString("en-IN")}`}
+    </button>
+
+    <p className="mt-4 text-center text-xs leading-5 text-slate-500">
+      You will be securely redirected to
+      Cashfree's payment window.
+    </p>
+
+    =====================================================
+  */}
+</div>
         </div>
       </section>
     </main>
