@@ -824,6 +824,8 @@ export default function AdminBookingsPage() {
           onClose={() =>
             setSelectedBooking(null)
           }
+          onSetConfirmed={(updatedBooking) => setSelectedBooking(updatedBooking)}
+          onBookingConfirmed={loadBookings}
         />
       )}
     </div>
@@ -1294,6 +1296,8 @@ function PageButton({
 function BookingDrawer({
   booking,
   onClose,
+  onSetConfirmed,
+  onBookingConfirmed
 }) {
   const isConfirmed = booking.status === "confirmed" || booking.status === "paid" ;
   const [confirming, setConfirming] = useState(false);
@@ -1336,6 +1340,8 @@ function BookingDrawer({
         data.message ||
           "Booking confirmed successfully."
       );
+      await onBookingConfirmed();
+      await onSetConfirmed(data.booking)
     } catch (error) {
       console.error(
         "Confirm booking error:",

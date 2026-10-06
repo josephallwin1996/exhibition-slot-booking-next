@@ -13,6 +13,7 @@ export default function PaymentPage() {
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState("");
+  const [copied, setCopied] = useState("");
 
   useEffect(() => {
     loadBooking();
@@ -51,6 +52,28 @@ export default function PaymentPage() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function copyToClipboard(
+  value,
+  type
+) {
+  try {
+    await navigator.clipboard.writeText(
+      String(value)
+    );
+
+    setCopied(type);
+
+    setTimeout(() => {
+      setCopied("");
+    }, 1500);
+  } catch (error) {
+    console.error(
+      "Unable to copy:",
+      error
+    );
+  }
   }
 
   async function handlePayment() {
@@ -441,10 +464,30 @@ export default function PaymentPage() {
         </li>
 
         <li>
-          3. Send the screenshot to:
-          <span className="ml-1 font-bold text-white">
-            +91 95443 64142
-          </span>
+          <div>
+            3. Send the screenshot to:
+          </div>
+
+          <div className="mt-2 flex items-center gap-2">
+            <span className="font-bold text-white">
+              +91 95443 64142
+            </span>
+
+            <button
+              type="button"
+              onClick={() =>
+                copyToClipboard(
+                  "+919544364142",
+                  "phone"
+                )
+              }
+              className="rounded-md border border-white/10 bg-white/10 px-2 py-1 text-[10px] font-semibold text-white transition hover:bg-white/20"
+            >
+              {copied === "phone"
+                ? "Copied"
+                : "Copy"}
+            </button>
+          </div>
         </li>
 
         <li>
@@ -453,14 +496,31 @@ export default function PaymentPage() {
       </ol>
 
       {/* Booking Reference */}
-      <div className="mt-3 rounded-lg bg-white/10 px-3 py-2 text-center">
-        <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
+      <div className="mt-3 rounded-lg bg-white/10 px-3 py-2">
+        <p className="text-center text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400">
           Booking Reference
         </p>
 
-        <p className="mt-1 text-sm font-bold text-amber-400">
-          {booking.bookingReference}
-        </p>
+        <div className="mt-2 flex items-center justify-center gap-2">
+          <p className="text-sm font-bold text-amber-400">
+            {booking.bookingReference}
+          </p>
+
+          <button
+            type="button"
+            onClick={() =>
+              copyToClipboard(
+                booking.bookingReference,
+                "reference"
+              )
+            }
+            className="rounded-md border border-white/10 bg-white/10 px-2 py-1 text-[10px] font-semibold text-white transition hover:bg-white/20"
+          >
+            {copied === "reference"
+              ? "Copied"
+              : "Copy"}
+          </button>
+        </div>
       </div>
     </div>
 

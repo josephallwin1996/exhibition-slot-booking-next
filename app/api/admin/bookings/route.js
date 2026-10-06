@@ -142,7 +142,7 @@ export async function GET(request) {
             "—",
 
           mobileNumber:
-            application?.mobileNumber ||
+            application?.mobile ||
             "—",
 
           category:

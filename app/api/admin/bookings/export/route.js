@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import connectDB from "@/lib/mongodb";
 import Booking from "@/models/Booking";
+import Application from "@/models/Application";
 
 export async function GET(request) {
   try {
@@ -15,18 +16,20 @@ export async function GET(request) {
       "";
 
     const paymentStatus =
-      searchParams.get(
-        "paymentStatus"
-      ) || "all";
+      searchParams.get("paymentStatus") ||
+      "all";
 
     const category =
       searchParams.get("category") ||
       "all";
 
     /*
-     * Build filters
+     * ----------------------------------------------------
+     * BUILD BOOKING QUERY
+     * ----------------------------------------------------
      */
-    const query = {};
+
+    const bookingQuery = {};
 
     /*
      * Payment filter
@@ -35,51 +38,114 @@ export async function GET(request) {
       paymentStatus &&
       paymentStatus !== "all"
     ) {
-      query.paymentStatus =
+      bookingQuery.paymentStatus =
         paymentStatus;
     }
 
     /*
-     * Category filter
+     * ----------------------------------------------------
+     * FIND MATCHING APPLICATIONS
+     *
+     * The admin bookings API uses Application data for:
+     * - businessName
+     * - contactPerson
+     * - email
+     * - mobileNumber
+     * - category
+     * ----------------------------------------------------
      */
-    if (
-      category &&
-      category !== "all"
-    ) {
-      query.category = category;
+
+    let matchingApplicationIds = null;
+
+    if (search || category !== "all") {
+      const applicationQuery = {};
+
+      /*
+       * Search applicant information
+       */
+      if (search) {
+        applicationQuery.$or = [
+          {
+            businessName: {
+              $regex: search,
+              $options: "i",
+            },
+          },
+          {
+            contactPerson: {
+              $regex: search,
+              $options: "i",
+            },
+          },
+          {
+            email: {
+              $regex: search,
+              $options: "i",
+            },
+          },
+          {
+            mobile: {
+              $regex: search,
+              $options: "i",
+            },
+          },
+          {
+            bookingToken: {
+              $regex: search,
+              $options: "i",
+            },
+          },
+        ];
+      }
+
+      /*
+       * Category filter
+       *
+       * category from the admin UI is expected
+       * to be the Category document ID.
+       */
+      if (
+        category &&
+        category !== "all"
+      ) {
+        applicationQuery.categoryId =
+          category;
+      }
+
+      const matchingApplications =
+        await Application.find(
+          applicationQuery
+        )
+          .select(
+            "_id businessName contactPerson email mobile categoryId"
+          )
+          .lean();
+
+      matchingApplicationIds =
+        matchingApplications.map(
+          (application) =>
+            application._id
+        );
     }
 
     /*
-     * Search filter
+     * ----------------------------------------------------
+     * SEARCH
+     * ----------------------------------------------------
+     *
+     * Search can match:
+     * - booking reference
+     * - slot number
+     * - applicant information
+     *
+     * If application filtering was performed,
+     * include those application IDs.
      */
+
     if (search) {
-      query.$or = [
+      const searchConditions = [
         {
           bookingReference: {
-            $regex: search,
-            $options: "i",
-          },
-        },
-        {
-          businessName: {
-            $regex: search,
-            $options: "i",
-          },
-        },
-        {
-          contactPerson: {
-            $regex: search,
-            $options: "i",
-          },
-        },
-        {
-          email: {
-            $regex: search,
-            $options: "i",
-          },
-        },
-        {
-          mobileNumber: {
             $regex: search,
             $options: "i",
           },
@@ -91,24 +157,98 @@ export async function GET(request) {
           },
         },
       ];
+
+      /*
+       * Application matches
+       */
+      if (
+        matchingApplicationIds &&
+        matchingApplicationIds.length > 0
+      ) {
+        searchConditions.push({
+          applicationId: {
+            $in: matchingApplicationIds,
+          },
+        });
+      }
+
+      bookingQuery.$or =
+        searchConditions;
+    } else if (
+      category &&
+      category !== "all"
+    ) {
+      /*
+       * Category-only filtering
+       */
+      bookingQuery.applicationId = {
+        $in:
+          matchingApplicationIds || [],
+      };
     }
 
     /*
-     * Fetch ALL matching bookings.
+     * ----------------------------------------------------
+     * FETCH ALL MATCHING BOOKINGS
      *
-     * Important:
-     * No pagination is applied here.
+     * No pagination.
+     * ----------------------------------------------------
      */
+
     const bookings =
-      await Booking.find(query)
+      await Booking.find(bookingQuery)
         .sort({
           createdAt: -1,
         })
         .lean();
 
     /*
-     * CSV headers
+     * ----------------------------------------------------
+     * FETCH APPLICATION DATA
+     * ----------------------------------------------------
      */
+
+    const applicationIds =
+      bookings
+        .map(
+          (booking) =>
+            booking.applicationId
+        )
+        .filter(Boolean);
+
+    const applications =
+      await Application.find({
+        _id: {
+          $in: applicationIds,
+        },
+      })
+        .populate(
+          "categoryId",
+          "name slug"
+        )
+        .lean();
+
+    /*
+     * Create quick lookup map
+     */
+    const applicationMap =
+      new Map(
+        applications.map(
+          (application) => [
+            String(
+              application._id
+            ),
+            application,
+          ]
+        )
+      );
+
+    /*
+     * ----------------------------------------------------
+     * CSV HEADERS
+     * ----------------------------------------------------
+     */
+
     const headers = [
       "Booking Reference",
       "Business Name",
@@ -129,9 +269,11 @@ export async function GET(request) {
     ];
 
     /*
-     * Convert a value safely
-     * into a CSV field.
+     * ----------------------------------------------------
+     * CSV VALUE HELPER
+     * ----------------------------------------------------
      */
+
     function csvValue(value) {
       if (
         value === null ||
@@ -143,9 +285,6 @@ export async function GET(request) {
       const stringValue =
         String(value);
 
-      /*
-       * Escape double quotes
-       */
       const escaped =
         stringValue.replaceAll(
           '"',
@@ -156,17 +295,26 @@ export async function GET(request) {
     }
 
     /*
-     * Build rows
+     * ----------------------------------------------------
+     * BUILD CSV ROWS
+     * ----------------------------------------------------
      */
+
     const rows = bookings.map(
       (booking) => {
+        const application =
+          applicationMap.get(
+            String(
+              booking.applicationId
+            )
+          );
+
         /*
-         * Calculate add-on amount.
-         *
-         * This supports the common
-         * structures used by the booking
-         * document.
+         * -----------------------------------------------
+         * ADD-ON AMOUNT
+         * -----------------------------------------------
          */
+
         const addOnAmount =
           Array.isArray(
             booking.addOns
@@ -189,8 +337,8 @@ export async function GET(request) {
 
                   /*
                    * If total already represents
-                   * quantity * price, don't
-                   * multiply again.
+                   * quantity × price, don't multiply
+                   * again.
                    */
                   const lineTotal =
                     addOn.total !==
@@ -208,12 +356,21 @@ export async function GET(request) {
             : 0;
 
         /*
-         * Determine stall amount.
+         * -----------------------------------------------
+         * TOTAL AMOUNT
+         * -----------------------------------------------
          */
+
         const totalAmount =
           Number(
             booking.total || 0
           );
+
+        /*
+         * -----------------------------------------------
+         * STALL AMOUNT
+         * -----------------------------------------------
+         */
 
         const stallAmount =
           Number(
@@ -228,9 +385,11 @@ export async function GET(request) {
           );
 
         /*
-         * Create readable add-on
-         * text for the CSV.
+         * -----------------------------------------------
+         * ADD-ON TEXT
+         * -----------------------------------------------
          */
+
         const addOns =
           Array.isArray(
             booking.addOns
@@ -255,36 +414,92 @@ export async function GET(request) {
                 .join("; ")
             : "";
 
+        /*
+         * -----------------------------------------------
+         * APPLICATION DATA
+         * -----------------------------------------------
+         */
+
+        const businessName =
+          application?.businessName ||
+          "—";
+
+        const contactPerson =
+          application?.contactPerson ||
+          "—";
+
+        const email =
+          application?.email ||
+          "—";
+
+        const mobileNumber =
+          application?.mobile ||
+          "—";
+
+        const categoryName =
+          application?.categoryId?.name ||
+          booking.category ||
+          "—";
+
+        /*
+         * -----------------------------------------------
+         * PAYMENT / ORDER IDs
+         *
+         * Supports current Cashfree fields
+         * and older legacy fields.
+         * -----------------------------------------------
+         */
+
+        const paymentId =
+          booking.cashfreePaymentId ||
+          booking.paymentId ||
+          booking.razorpayPaymentId ||
+          "";
+
+        const orderId =
+          booking.cashfreeOrderId ||
+          booking.orderId ||
+          booking.razorpayOrderId ||
+          "";
+
+        /*
+         * -----------------------------------------------
+         * CSV ROW
+         * -----------------------------------------------
+         */
+
         return [
           csvValue(
             booking.bookingReference
           ),
 
           csvValue(
-            booking.businessName
+            businessName
           ),
 
           csvValue(
-            booking.contactPerson
+            contactPerson
           ),
 
           csvValue(
-            booking.email
+            email
           ),
 
           csvValue(
-            booking.mobileNumber
+            mobileNumber
           ),
 
           csvValue(
-            booking.category
+            categoryName
           ),
 
           csvValue(
             booking.slotNumber
           ),
 
-          csvValue(addOns),
+          csvValue(
+            addOns
+          ),
 
           csvValue(
             stallAmount
@@ -303,13 +518,11 @@ export async function GET(request) {
           ),
 
           csvValue(
-            booking.razorpayPaymentId ||
-              booking.paymentId
+            paymentId
           ),
 
           csvValue(
-            booking.razorpayOrderId ||
-              booking.orderId
+            orderId
           ),
 
           csvValue(
@@ -330,11 +543,14 @@ export async function GET(request) {
     );
 
     /*
-     * UTF-8 BOM.
+     * ----------------------------------------------------
+     * BUILD CSV
+     * ----------------------------------------------------
      *
-     * This helps Microsoft Excel
-     * correctly recognize UTF-8.
+     * UTF-8 BOM helps Excel correctly
+     * recognize Indian/Unicode text.
      */
+
     const csv = [
       "\uFEFF",
       headers
@@ -344,8 +560,11 @@ export async function GET(request) {
     ].join("\r\n");
 
     /*
-     * Generate filename
+     * ----------------------------------------------------
+     * FILENAME
+     * ----------------------------------------------------
      */
+
     const date =
       new Date()
         .toISOString()
@@ -353,6 +572,12 @@ export async function GET(request) {
 
     const filename =
       `exhibition-bookings-${date}.csv`;
+
+    /*
+     * ----------------------------------------------------
+     * RESPONSE
+     * ----------------------------------------------------
+     */
 
     return new Response(csv, {
       status: 200,
